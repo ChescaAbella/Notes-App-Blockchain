@@ -1,12 +1,42 @@
-# React + Vite
+# Notes App Blockchain
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A simple **Notes Web Application** with authentication and CRUD (Create, Read, Update, Delete) features.  
+Built for our project using:
 
-Currently, two official plugins are available:
+- **Frontend:** React (Vite, JavaScript, CSS)
+- **Backend:** Node.js (Express)
+- **Database:** SQLite
+- **Auth:** JWT + bcrypt
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## 🚀 How to Run
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/ChescaAbella/Notes-App-Blockchain.git
+cd Notes-App-Blockchain
+```
+
+### 1. Setup & Run the backend
+
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+Backend will start at http://localhost:4000
+
+### 1. Setup & Run the frontend
+
+Open a new terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend will start at http://localhost:5173
