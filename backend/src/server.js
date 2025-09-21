@@ -18,36 +18,83 @@ const auth = (req, res, next) => {
     catch { return res.status(401).json({ message: "Unauthorized" }); }
 };
 
+//Create account
 app.post("/api/auth/signup", (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ message: "Missing fields" });
+    const { firstName, lastName, email, password, username } = req.body || {};
 
-    const exists = db.prepare("SELECT 1 FROM users WHERE email = ?").get(email.toLowerCase());
-    if (exists) return res.status(409).json({ message: "Email already used" });
+    if (!firstName?.trim() || !lastName?.trim() || !email?.trim() || !password?.trim()) {
+        return res.status(400).json({ message: "Missing fields" });
+    }
+    const emailNorm = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+        return res.status(400).json({ message: "Invalid email" });
+    }
+    if ((password || "").length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+    }
+
+    const exists = db.prepare("SELECT 1 FROM users WHERE email = ?").get(emailNorm);
+    if (exists) return res.status(409).json({ message: "Email already in use" });
+
+    if (username?.trim()) {
+        const unameNorm = username.trim().toLowerCase();
+        const uExists = db.prepare("SELECT 1 FROM users WHERE username = ?").get(unameNorm);
+        if (uExists) return res.status(409).json({ message: "Username already taken" });
+    }
 
     const password_hash = bcrypt.hashSync(password, 10);
     const id = uid();
-    db.prepare("INSERT INTO users (id, email, password_hash) VALUES (?,?,?)")
-        .run(id, email.toLowerCase(), password_hash);
+
+    db.prepare(`
+    INSERT INTO users (id, first_name, last_name, email, username, password_hash)
+    VALUES (?,?,?,?,?,?)
+  `).run(
+        id,
+        firstName.trim(),
+        lastName.trim(),
+        emailNorm,
+        username?.trim()?.toLowerCase() || null,
+        password_hash
+    );
 
     const token = jwt.sign({ sub: id }, JWT_SECRET, { expiresIn: "7d" });
-    res.json({ token, user: { id, email: email.toLowerCase() } });
+    res.json({
+        token,
+        user: { id, firstName: firstName.trim(), lastName: lastName.trim(), email: emailNorm, username: username?.trim()?.toLowerCase() || null }
+    });
 });
 
+// For Sign in 
 app.post("/api/auth/signin", (req, res) => {
-    const { email, password } = req.body;
-    const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email?.toLowerCase());
+    const { identifier, email, password } = req.body || {};
+    const loginId = (identifier || email || "").trim().toLowerCase();
+
+    if (!loginId || !password) return res.status(400).json({ message: "Missing fields" });
+
+    const user =
+        db.prepare("SELECT * FROM users WHERE email = ?").get(loginId) ||
+        db.prepare("SELECT * FROM users WHERE username = ?").get(loginId);
+
     if (!user) return res.status(401).json({ message: "Invalid credentials" });
     if (!bcrypt.compareSync(password, user.password_hash))
         return res.status(401).json({ message: "Invalid credentials" });
 
     const token = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: "7d" });
-    res.json({ token, user: { id: user.id, email: user.email } });
+    res.json({
+        token,
+        user: {
+            id: user.id,
+            firstName: user.first_name,
+            lastName: user.last_name,
+            email: user.email,
+            username: user.username
+        }
+    });
 });
 
 app.get("/api/auth/me", auth, (req, res) => {
-    const u = db.prepare("SELECT id, email FROM users WHERE id = ?").get(req.userId);
-    res.json({ user: u });
+    const u = db.prepare("SELECT id, first_name, last_name, email, username FROM users WHERE id = ?").get(req.userId);
+    res.json({ user: u && { id: u.id, firstName: u.first_name, lastName: u.last_name, email: u.email, username: u.username } });
 });
 
 app.get("/api/notes", auth, (req, res) => {
@@ -58,7 +105,7 @@ app.get("/api/notes", auth, (req, res) => {
 });
 
 app.post("/api/notes", auth, (req, res) => {
-    const { title, content } = req.body;
+    const { title, content } = req.body || {};
     const id = uid();
     db.prepare(
         "INSERT INTO notes (id, user_id, title, content, updated_at) VALUES (?,?,?,?,datetime('now'))"
@@ -68,7 +115,7 @@ app.post("/api/notes", auth, (req, res) => {
 });
 
 app.put("/api/notes/:id", auth, (req, res) => {
-    const { title, content } = req.body;
+    const { title, content } = req.body || {};
     db.prepare(
         "UPDATE notes SET title = ?, content = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?"
     ).run(title || "", content || "", req.params.id, req.userId);
@@ -81,6 +128,5 @@ app.delete("/api/notes/:id", auth, (req, res) => {
     res.json({ ok: true });
 });
 
-/* eslint-disable no-undef */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`API on http://localhost:${PORT}`));

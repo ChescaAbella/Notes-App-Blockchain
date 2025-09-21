@@ -6,17 +6,38 @@ import "../styles/auth.css";
 export default function SignUp() {
   const nav = useNavigate();
   const { signup } = useAuth();
-  const [form, setForm] = useState({ email: "", password: "" });
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+  });
   const [err, setErr] = useState("");
 
   async function onSubmit(e) {
     e.preventDefault();
     setErr("");
-    if (!form.email || !form.password)
+
+    const payload = {
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim(),
+      email: form.email.trim(),
+      password: form.password.trim(),
+    };
+    if (
+      !payload.firstName ||
+      !payload.lastName ||
+      !payload.email ||
+      !payload.password
+    ) {
       return setErr("Please fill in all fields.");
+    }
+    if (payload.password.length < 6)
+      return setErr("Password must be at least 6 characters.");
+
     try {
-      await signup(form.email, form.password);
-      nav("/notes");
+      await signup(payload);
+      nav("/signin", { state: { msg: "Account created! Please sign in." } });
     } catch (e) {
       setErr(e?.response?.data?.message || "Sign up failed");
     }
@@ -27,6 +48,16 @@ export default function SignUp() {
       <div className="auth-card">
         <h1 className="auth-title">Create account</h1>
         <form className="auth-form" onSubmit={onSubmit}>
+          <input
+            placeholder="First name"
+            value={form.firstName}
+            onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+          />
+          <input
+            placeholder="Last name"
+            value={form.lastName}
+            onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+          />
           <input
             type="email"
             placeholder="Email"
@@ -44,7 +75,6 @@ export default function SignUp() {
             Sign Up
           </button>
         </form>
-
         <div className="auth-footer">
           <span>Already have an account?</span>
           <Link className="text-link" to="/signin">

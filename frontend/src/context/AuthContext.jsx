@@ -8,19 +8,25 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  async function signin(email, password) {
-    const { data } = await api.post("/auth/signin", { email, password });
+  async function signin(identifierOrEmail, password) {
+    const { data } = await api.post("/auth/signin", {
+      identifier: identifierOrEmail,
+      password,
+    });
     localStorage.setItem("token", data.token);
     setUser(data.user);
   }
-  async function signup(nameOrEmail, emailMaybe, password) {
-    const payload = emailMaybe
-      ? { email: emailMaybe, password }
-      : { email: nameOrEmail, password };
-    const { data } = await api.post("/auth/signup", payload);
-    localStorage.setItem("token", data.token);
-    setUser(data.user);
+
+  async function signup({ firstName, lastName, email, password }) {
+    const { data } = await api.post("/auth/signup", {
+      firstName,
+      lastName,
+      email,
+      password,
+    });
+    return data; // let caller decide what to do next
   }
+
   function logout() {
     localStorage.removeItem("token");
     setUser(null);
