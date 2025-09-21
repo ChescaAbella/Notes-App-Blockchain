@@ -4,8 +4,7 @@ import Header from "./components/header";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
-import NotesPage from "./pages/NotesPage";
-
+import HomePage from "./pages/HomePage";
 function ProtectedRoute({ children }) {
   const { loading, isAuthed } = useAuth();
   if (loading) return null;
@@ -22,13 +21,15 @@ export default function App() {
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
           <Route
-            path="/notes"
+            path="/home"
             element={
               <ProtectedRoute>
-                <NotesPage />
+                <HomePage />
               </ProtectedRoute>
             }
           />
+          {/* legacy redirect if someone hits /notes */}
+          <Route path="/notes" element={<Navigate to="/home" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

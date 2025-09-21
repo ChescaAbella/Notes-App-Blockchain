@@ -63,9 +63,9 @@ const Header = () => {
             <button
               type="button"
               className="btn ghost"
-              onClick={() => nav("/notes")}
+              onClick={() => nav("/home")}
             >
-              My Notes
+              Home
             </button>
             <button type="button" className="btn danger" onClick={logout}>
               Logout
