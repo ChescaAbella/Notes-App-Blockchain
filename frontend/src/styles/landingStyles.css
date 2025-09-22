@@ -71,10 +71,12 @@
             position: relative;
         }
         .notes-wrap{
+            padding-top: 64px;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            scroll-margin-top: 80px;
         }
         .note-form{
             width: 50vw;
@@ -89,6 +91,25 @@
             flex-direction: column;
             padding: 1.5rem;
         }
+        
+
+        .note-form input,
+        .note-form textarea {
+            padding: 0.65rem 0.75rem;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 0.5rem;
+            background: #fafafa;
+            outline: none;
+            margin: 1rem; 
+            width: 90%;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            }
+
+        .note-form textarea{
+            height: 100%;
+        }
+
         .notes-container{
             display: flex;
             justify-content: center;   
@@ -111,11 +132,25 @@
             border-radius: 12px;
             padding: 2rem;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
+            max-width: 500px;
             margin: 0 auto;
+            text-overflow: ellipsis;
             transform: rotate(-2deg);
             animation: float 6s ease-in-out infinite;
         }
+        .note-card input,
+.note-card textarea {
+  width: 100%;             
+  padding: 0.65rem 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  background: #fafafa;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;  
+  margin: 0;               
+}
 
         .note-card::before {
             content: '';

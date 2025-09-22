@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../lib/api";
 
+
 export default function HomePage() {
   const [notes, setNotes] = useState([]);
   const [draft, setDraft] = useState({ title: "", content: "" });
@@ -42,7 +43,7 @@ export default function HomePage() {
   return (
     <div className="notes-wrap">
       <div className="notes-container">
-        <h1 className="notes-title">My Notes</h1>
+        
         {/* add note */}
         <form className="note-form" onSubmit={addNote}>
           <input
@@ -61,10 +62,11 @@ export default function HomePage() {
             </button>
           </div>
         </form>
-      
+
+        <h1 className="notes-title">My Notes</h1>
         {/* list */}
         {notes.length === 0 ? (
-          <div className="empty">No notes yet — add your first note above.</div>
+          <div className="empty">No notes yet — add your first note.</div>
         ) : (
           <ul className="notes-grid">
             {notes.map((n) => (
