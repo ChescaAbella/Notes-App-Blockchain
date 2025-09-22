@@ -18,7 +18,7 @@ const auth = (req, res, next) => {
     catch { return res.status(401).json({ message: "Unauthorized" }); }
 };
 
-//Create account
+// Create account
 app.post("/api/auth/signup", (req, res) => {
     const { firstName, lastName, email, password, username } = req.body || {};
 
@@ -97,6 +97,7 @@ app.get("/api/auth/me", auth, (req, res) => {
     res.json({ user: u && { id: u.id, firstName: u.first_name, lastName: u.last_name, email: u.email, username: u.username } });
 });
 
+// NOTES CRUD
 app.get("/api/notes", auth, (req, res) => {
     const rows = db.prepare(
         "SELECT id, title, content, updated_at FROM notes WHERE user_id = ? ORDER BY datetime(updated_at) DESC"
@@ -126,6 +127,81 @@ app.put("/api/notes/:id", auth, (req, res) => {
 app.delete("/api/notes/:id", auth, (req, res) => {
     db.prepare("DELETE FROM notes WHERE id = ? AND user_id = ?").run(req.params.id, req.userId);
     res.json({ ok: true });
+});
+
+// CONTACT CRUD
+// Submit contact form (no auth required - public endpoint)
+app.post("/api/contact", (req, res) => {
+    const { name, email, subject, message } = req.body || {};
+
+    // Validate required fields
+    if (!name?.trim() || !email?.trim() || !message?.trim()) {
+        return res.status(400).json({ message: "Name, email, and message are required" });
+    }
+
+    // Validate email format
+    const emailNorm = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+        return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    const id = uid();
+    
+    db.prepare(`
+        INSERT INTO contact_messages (id, name, email, subject, message)
+        VALUES (?, ?, ?, ?, ?)
+    `).run(
+        id,
+        name.trim(),
+        emailNorm,
+        subject?.trim() || null,
+        message.trim()
+    );
+
+    res.json({ 
+        success: true, 
+        message: "Thank you for your message! We'll get back to you soon." 
+    });
+});
+
+// Get all contact messages (admin only - requires auth)
+app.get("/api/contact", auth, (req, res) => {
+    const messages = db.prepare(`
+        SELECT id, name, email, subject, message, status, created_at 
+        FROM contact_messages 
+        ORDER BY datetime(created_at) DESC
+    `).all();
+    
+    res.json({ messages });
+});
+
+// Update message status (admin only - requires auth)
+app.put("/api/contact/:id", auth, (req, res) => {
+    const { status } = req.body || {};
+    
+    if (!status || !['unread', 'read', 'replied'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status. Must be: unread, read, or replied" });
+    }
+
+    db.prepare(`
+        UPDATE contact_messages 
+        SET status = ? 
+        WHERE id = ?
+    `).run(status, req.params.id);
+
+    const message = db.prepare(`
+        SELECT id, name, email, subject, message, status, created_at 
+        FROM contact_messages 
+        WHERE id = ?
+    `).get(req.params.id);
+
+    res.json({ message });
+});
+
+// Delete contact message (admin only - requires auth)
+app.delete("/api/contact/:id", auth, (req, res) => {
+    db.prepare("DELETE FROM contact_messages WHERE id = ?").run(req.params.id);
+    res.json({ success: true });
 });
 
 const PORT = process.env.PORT || 4000;
