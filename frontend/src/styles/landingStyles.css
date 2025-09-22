@@ -89,6 +89,16 @@
             flex-direction: column;
             padding: 1.5rem;
         }
+        .notes-container{
+            display: flex;
+            justify-content: center;   
+            align-items: flex-start;   
+            gap: 2rem;                 
+            flex-wrap: wrap;         
+            padding: 2rem;
+            min-height: 100vh; 
+             
+        }
         .notes-title{
             font-size: 1.5rem;
             font-weight: 700;
