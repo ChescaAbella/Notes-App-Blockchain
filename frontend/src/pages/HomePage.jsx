@@ -43,7 +43,6 @@ export default function HomePage() {
     <div className="notes-wrap">
       <div className="notes-container">
         <h1 className="notes-title">My Notes</h1>
-
         {/* add note */}
         <form className="note-form" onSubmit={addNote}>
           <input
@@ -62,7 +61,7 @@ export default function HomePage() {
             </button>
           </div>
         </form>
-
+      
         {/* list */}
         {notes.length === 0 ? (
           <div className="empty">No notes yet — add your first note above.</div>
