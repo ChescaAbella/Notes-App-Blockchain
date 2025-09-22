@@ -4,8 +4,11 @@ import Header from "./components/header";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
+import NotesPage from "./pages/NotesPage";
 import HomePage from "./pages/HomePage";
+import About from "./pages/About";
 import Contact from "./pages/Contact";
+
 
 function ProtectedRoute({ children }) {
   const { loading, isAuthed } = useAuth();
@@ -22,7 +25,9 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
+          <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+
           <Route
             path="/home"
             element={
