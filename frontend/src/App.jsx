@@ -4,7 +4,6 @@ import Header from "./components/header";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
-import NotesPage from "./pages/NotesPage";
 import HomePage from "./pages/HomePage";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
