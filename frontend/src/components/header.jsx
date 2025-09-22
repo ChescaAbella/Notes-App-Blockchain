@@ -40,7 +40,7 @@ const Header = () => {
             <a href="#about">About</a>
           </li>
           <li>
-            <a href="#contact">Contact Us</a>
+            <Link to="/contact">Contact Us</Link>
           </li>
         </ul>
         {!isAuthed ? (
