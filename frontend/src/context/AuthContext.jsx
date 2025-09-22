@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import api from "../lib/api";
 
 const Ctx = createContext(null);
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(Ctx);
 
 export function AuthProvider({ children }) {

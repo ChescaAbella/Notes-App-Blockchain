@@ -18,6 +18,7 @@ const Header = () => {
         header.style.borderBottom = "1px solid rgba(0, 0, 0, 0.05)";
       }
     };
+
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -28,7 +29,6 @@ const Header = () => {
         <Link to="/" className="logo" aria-label="Go to homepage">
           NoteApp
         </Link>
-
         <ul className="nav-links">
           <li>
             <a href="#features">Features</a>
@@ -41,8 +41,10 @@ const Header = () => {
             <Link to="/about">About</Link>
 
           </li>
+          <li>
+            <Link to="/contact">Contact Us</Link>
+          </li>
         </ul>
-
         {!isAuthed ? (
           <div className="nav-actions">
             <button
@@ -65,9 +67,9 @@ const Header = () => {
             <button
               type="button"
               className="btn ghost"
-              onClick={() => nav("/notes")}
+              onClick={() => nav("/home")}
             >
-              My Notes
+              Home
             </button>
             <button type="button" className="btn danger" onClick={logout}>
               Logout

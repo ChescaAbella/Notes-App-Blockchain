@@ -19,7 +19,7 @@ export default function SignIn() {
     if (!id || !pw) return setErr("Please fill in all fields.");
     try {
       await signin(id, pw);
-      nav("/notes");
+      nav("/home");
     } catch (e) {
       setErr(e?.response?.data?.message || "Sign in failed");
     }
