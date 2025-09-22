@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import NotesPage from "./pages/NotesPage";
+import About from "./pages/About";
 
 function ProtectedRoute({ children }) {
   const { loading, isAuthed } = useAuth();
@@ -21,6 +22,8 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
+          <Route path="/about" element={<About />} />
+
           <Route
             path="/notes"
             element={
