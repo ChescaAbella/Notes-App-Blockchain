@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import api from "../lib/api";
+import '../styles/home.css'
 
 export default function HomePage() {
   const [notes, setNotes] = useState([]);
@@ -56,10 +57,10 @@ export default function HomePage() {
               value={draft.content}
               onChange={(e) => setDraft({ ...draft, content: e.target.value })}
             />
-            <button className="btn primary" type="submit">
+          </div>
+           <button className="btn home" type="submit">
               Add
             </button>
-          </div>
         </form>
       
         {/* list */}
