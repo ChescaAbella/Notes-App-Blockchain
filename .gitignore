@@ -23,3 +23,5 @@ dist-ssr
 *.sln
 *.sw?
 backend/dev.db*
+backend/dev.db-shm
+backend/dev.db-wal
