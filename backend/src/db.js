@@ -22,6 +22,16 @@ CREATE TABLE IF NOT EXISTS notes (
   updated_at TEXT DEFAULT (datetime('now')),
   FOREIGN KEY(user_id) REFERENCES users(id)
 );
+
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  subject TEXT,
+  message TEXT NOT NULL,
+  status TEXT DEFAULT 'unread',
+  created_at TEXT DEFAULT (datetime('now'))
+);
 `);
 
 export default db;

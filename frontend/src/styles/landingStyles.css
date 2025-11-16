@@ -70,40 +70,7 @@
             margin-top: 3rem;
             position: relative;
         }
-
-        .note-card {
-            background: white;
-            border-radius: 12px;
-            padding: 2rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
-            margin: 0 auto;
-            transform: rotate(-2deg);
-            animation: float 6s ease-in-out infinite;
-        }
-
-        .note-card::before {
-            content: '';
-            position: absolute;
-            top: -5px;
-            left: 20px;
-            width: 40px;
-            height: 20px;
-            background: #fbbf24;
-            border-radius: 2px;
-            opacity: 0.8;
-        }
-
-        .note-lines {
-            height: 4px;
-            background: #e5e7eb;
-            margin: 1rem 0;
-            border-radius: 2px;
-        }
-
-        .note-lines:nth-child(2) { width: 100%; }
-        .note-lines:nth-child(3) { width: 80%; }
-        .note-lines:nth-child(4) { width: 90%; }
+       
 
         /* Features Section */
         .features {
