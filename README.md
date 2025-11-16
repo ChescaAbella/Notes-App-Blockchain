@@ -71,7 +71,7 @@ After installation:
 
 2. Add nodePolyfills() inside the plugins array
 
-
+---
 
 Example:
 
