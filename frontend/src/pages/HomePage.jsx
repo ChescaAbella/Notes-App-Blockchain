@@ -16,6 +16,12 @@ export default function HomePage() {
   const [addressCopied, setAddressCopied] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
 
+  const [lastTxTime, setLastTxTime] = useState(null);
+  const [cooldownTimeLeft, setCooldownTimeLeft] = useState(0);
+  const COOLDOWN_MS = 90_000; // 90 seconds
+
+  const isInCooldown = lastTxTime && Date.now() - lastTxTime < COOLDOWN_MS;
+
   const [provider] = useState(
     () =>
       new Blockfrost({
@@ -23,6 +29,24 @@ export default function HomePage() {
         projectId: import.meta.env.VITE_BLOCKFROST_PROJECT_ID,
       })
   );
+
+  // Cooldown countdown effect
+  useEffect(() => {
+    if (!lastTxTime) return;
+
+    const interval = setInterval(() => {
+      const remaining = COOLDOWN_MS - (Date.now() - lastTxTime);
+
+      if (remaining <= 0) {
+        setCooldownTimeLeft(0);
+        clearInterval(interval);
+      } else {
+        setCooldownTimeLeft(Math.ceil(remaining / 1000));
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [lastTxTime]);
 
   useEffect(() => {
     if (window.cardano) {
@@ -73,6 +97,14 @@ export default function HomePage() {
 
   const addNoteOnChain = async (e) => {
     e.preventDefault();
+
+    const now = Date.now();
+    if (lastTxTime && now - lastTxTime < COOLDOWN_MS) {
+      const remaining = Math.ceil((COOLDOWN_MS - (now - lastTxTime)) / 1000);
+      showToast(`Please wait ${remaining}s before adding another note`, "error");
+      return;
+    }
+
     if (!walletApi) {
       showToast("Please connect your wallet first", "error");
       return;
@@ -84,6 +116,7 @@ export default function HomePage() {
 
     try {
       setIsLoading(true);
+
       const wallet = new WebWallet(walletApi);
       const blaze = await Blaze.from(provider, wallet);
 
@@ -94,7 +127,11 @@ export default function HomePage() {
       const tx = await blaze
         .newTransaction()
         .payLovelace(Core.Address.fromBech32(walletAddress), 1_000_000n)
-        .complete({ metadata });
+        .complete({
+          metadata,
+          changeAddress: walletAddress,
+          utxoSelection: "auto",
+        });
 
       const signedTx = await blaze.signTransaction(tx);
       const txHash = await blaze.provider.postTransactionToChain(signedTx);
@@ -103,9 +140,12 @@ export default function HomePage() {
         { title, content, txHash, timestamp: new Date().toISOString() },
         ...notes,
       ]);
+
       setDraft({ title: "", content: "" });
       setShowModal(false);
       showToast("Note added to blockchain successfully!", "success");
+
+      setLastTxTime(Date.now());
     } catch (err) {
       console.error("Failed to add note:", err);
       showToast("Failed to add note: " + err.message, "error");
@@ -181,9 +221,9 @@ export default function HomePage() {
               <button
                 onClick={() => setShowModal(true)}
                 className="btn-create"
-                disabled={isLoading}
+                disabled={isLoading || isInCooldown}
               >
-                <span className="btn-icon">+</span>
+                {isInCooldown ? `Wait ${cooldownTimeLeft}s ` : <span className="btn-icon">+</span>}
                 Create Note
               </button>
             </div>
@@ -243,8 +283,9 @@ export default function HomePage() {
                 <button
                   onClick={() => setShowModal(true)}
                   className="btn-create-empty"
+                  disabled={isInCooldown}
                 >
-                  Create Your First Note
+                  {isInCooldown ? `Wait ${cooldownTimeLeft}s ` : "Create Your First Note"}
                 </button>
               </div>
             ) : (
@@ -259,15 +300,12 @@ export default function HomePage() {
                     <div className="note-item-footer">
                       <span className="note-time">
                         {note.timestamp
-                          ? new Date(note.timestamp).toLocaleDateString(
-                              "en-US",
-                              {
-                                month: "short",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              }
-                            )
+                          ? new Date(note.timestamp).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
                           : "Just now"}
                       </span>
                       <span className="note-hash" title={note.txHash}>
@@ -324,9 +362,13 @@ export default function HomePage() {
                   <button
                     type="submit"
                     className="btn-submit"
-                    disabled={isLoading}
+                    disabled={isLoading || isInCooldown}
                   >
-                    {isLoading ? "Adding..." : "Add to Blockchain"}
+                    {isLoading
+                      ? "Adding..."
+                      : isInCooldown
+                      ? `Wait ${cooldownTimeLeft}s `
+                      : "Add to Blockchain"}
                   </button>
                 </div>
               </form>
