@@ -15,6 +15,9 @@ export default function HomePage() {
   const [showModal, setShowModal] = useState(false);
   const [addressCopied, setAddressCopied] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
+  const [editingNote, setEditingNote] = useState(null);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const [lastTxTime, setLastTxTime] = useState(null);
   const [cooldownTimeLeft, setCooldownTimeLeft] = useState(0);
@@ -111,6 +114,28 @@ export default function HomePage() {
     setTimeout(() => setToast({ show: false, message: "", type: "" }), 3000);
   };
 
+  const openNote = (note) => {
+    setEditingNote(note);
+    setDraft({ title: note.title, content: note.content });
+    setHasChanges(false);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingNote(null);
+    setDraft({ title: "", content: "" });
+    setHasChanges(false);
+  };
+
+  const handleDraftChange = (field, value) => {
+    setDraft({ ...draft, [field]: value });
+    if (editingNote) {
+      const changed = value !== editingNote[field];
+      setHasChanges(changed || (field === 'title' ? draft.content !== editingNote.content : draft.title !== editingNote.title));
+    }
+  };
+
   const copyAddress = () => {
     if (walletAddress) {
       navigator.clipboard.writeText(walletAddress);
@@ -149,6 +174,18 @@ export default function HomePage() {
 
   const addNoteOnChain = async (e) => {
     e.preventDefault();
+
+    // If editing and has changes, show confirmation
+    if (editingNote && hasChanges) {
+      setShowConfirmModal(true);
+      return;
+    }
+
+    await saveNoteToBlockchain();
+  };
+
+  const saveNoteToBlockchain = async () => {
+    setShowConfirmModal(false);
 
     const now = Date.now();
     if (lastTxTime && now - lastTxTime < COOLDOWN_MS) {
@@ -207,14 +244,27 @@ export default function HomePage() {
           };
           console.log('Saving to database:', noteData);
           
-          const response = await fetch('http://localhost:4000/api/notes', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify(noteData)
-          });
+          // Update the existing note in the database when editing
+          let response;
+          if (editingNote && editingNote.id) {
+            response = await fetch(`http://localhost:4000/api/notes/${editingNote.id}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify(noteData)
+            });
+          } else {
+            response = await fetch('http://localhost:4000/api/notes', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify(noteData)
+            });
+          }
           
           console.log('Database response status:', response.status);
           const data = await response.json();
@@ -232,11 +282,17 @@ export default function HomePage() {
         console.warn('No token found - are you logged in?');
       }
 
-      setNotes([newNote, ...notes]);
-      setDraft({ title: "", content: "" });
-      setShowModal(false);
-      showToast("Note added to blockchain successfully!", "success");
+      // Update notes list - replace if editing, add if new
+      if (editingNote) {
+        setNotes(notes.map(n => n.id === editingNote.id ? newNote : n));
+        showToast("Note updated on blockchain successfully!", "success");
+      } else {
+        setNotes([newNote, ...notes]);
+        showToast("Note added to blockchain successfully!", "success");
+      }
 
+      setDraft({ title: "", content: "" });
+      closeModal();
       setLastTxTime(Date.now());
     } catch (err) {
       console.error("Failed to add note:", err);
@@ -383,7 +439,7 @@ export default function HomePage() {
             ) : (
               <div className="notes-masonry">
                 {filteredNotes.map((note, idx) => (
-                  <div key={idx} className="note-item">
+                  <div key={idx} className="note-item" onClick={() => openNote(note)} style={{cursor: 'pointer'}}>
                     <div className="note-item-header">
                       <h3>{note.title || "Untitled"}</h3>
                       <span className="chain-badge">⛓️</span>
@@ -412,13 +468,13 @@ export default function HomePage() {
         )}
 
         {showModal && (
-          <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal-overlay" onClick={closeModal}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
               <div className="modal-header">
-                <h2>Create New Note</h2>
+                <h2>{editingNote ? "Selected Note" : "Create New Note"}</h2>
                 <button
                   className="modal-close"
-                  onClick={() => setShowModal(false)}
+                  onClick={closeModal}
                 >
                   ×
                 </button>
@@ -428,25 +484,21 @@ export default function HomePage() {
                   type="text"
                   placeholder="Note title"
                   value={draft.title}
-                  onChange={(e) =>
-                    setDraft({ ...draft, title: e.target.value })
-                  }
+                  onChange={(e) => handleDraftChange('title', e.target.value)}
                   className="modal-input"
                   autoFocus
                 />
                 <textarea
                   placeholder="Write your note..."
                   value={draft.content}
-                  onChange={(e) =>
-                    setDraft({ ...draft, content: e.target.value })
-                  }
+                  onChange={(e) => handleDraftChange('content', e.target.value)}
                   className="modal-textarea"
                   rows="10"
                 />
                 <div className="modal-actions">
                   <button
                     type="button"
-                    onClick={() => setShowModal(false)}
+                    onClick={closeModal}
                     className="btn-cancel"
                   >
                     Cancel
@@ -454,16 +506,56 @@ export default function HomePage() {
                   <button
                     type="submit"
                     className="btn-submit"
-                    disabled={isLoading || isInCooldown}
+                    disabled={isLoading || isInCooldown || (editingNote && !hasChanges)}
                   >
                     {isLoading
-                      ? "Adding..."
+                      ? editingNote ? "Saving..." : "Adding..."
                       : isInCooldown
                       ? `Wait ${cooldownTimeLeft}s `
-                      : "Add to Blockchain"}
+                      : editingNote ? "Save Changes" : "Add to Blockchain"}
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmation Modal */}
+        {showConfirmModal && (
+          <div className="modal-overlay" onClick={() => setShowConfirmModal(false)}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '400px'}}>
+              <div className="modal-header">
+                <h2>Confirm Changes</h2>
+                <button
+                  className="modal-close"
+                  onClick={() => setShowConfirmModal(false)}
+                >
+                  ×
+                </button>
+              </div>
+              <div style={{padding: '20px'}}>
+                <p style={{marginBottom: '20px', lineHeight: '1.6'}}>
+                  This will create a new transaction on the blockchain with the updated content. 
+                  The original note remains immutably stored on-chain, but this version will be displayed.
+                </p>
+                <div className="modal-actions">
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmModal(false)}
+                    className="btn-cancel"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveNoteToBlockchain}
+                    className="btn-submit"
+                    disabled={isLoading}
+                  >
+                    Confirm & Save
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
