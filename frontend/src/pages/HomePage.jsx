@@ -1,174 +1,94 @@
 import { useState } from "react";
-import { Blaze, Core } from "@blaze-cardano/sdk";
 import "../styles/home.css";
 
 // Hooks
 import { useWallet } from "../hooks/useWallet";
 import { useNotes } from "../hooks/useNotes";
-import { useTransactionCooldown } from "../hooks/useTransactionCooldown";
 import { useToast } from "../hooks/useToast";
+import { useNoteEditor } from "../hooks/useNoteEditor";
+import { useNoteSubmission } from "../hooks/useNoteSubmission";
+import { useClipboardCopy } from "../hooks/useClipboardCopy";
 
 // Context
 import { useBlockchain } from "../context/BlockchainProvider";
 
 // Utils
-import { copyToClipboard } from "../utils/clipboard";
 import { filterNotes } from "../utils/noteHelpers";
 
 export default function HomePage() {
-  const [draft, setDraft] = useState({ title: "", content: "" });
-  const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [addressCopied, setAddressCopied] = useState(false);
-  const [editingNote, setEditingNote] = useState(null);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  // Custom hooks
+  // Context & Utils
+  const { provider } = useBlockchain();
+  const { toast, showToast } = useToast();
+  const { isCopied, copy } = useClipboardCopy();
+
+  // Wallet
   const {
     wallets,
     walletApi,
     selectedWallet,
-    setSelectedWallet,
     walletAddress,
     isConnecting,
-    connectWallet,
+    handleWalletChange,
+    handleConnectWallet,
     createWebWallet,
     isConnected
   } = useWallet();
 
+  // Notes
   const { notes, saveNoteToDatabase, addNote, updateNote } = useNotes();
-  const { isInCooldown, cooldownTimeLeft, startCooldown, checkCooldown } = useTransactionCooldown();
-  const { toast, showToast } = useToast();
-  const { provider } = useBlockchain();
 
-  const openNote = (note) => {
-    setEditingNote(note);
-    setDraft({ title: note.title, content: note.content });
-    setHasChanges(false);
-    setShowModal(true);
+  // Note Editor
+  const {
+    draft,
+    editingNote,
+    hasChanges,
+    showModal,
+    showConfirmModal,
+    setShowModal,
+    openNote,
+    closeModal,
+    handleDraftChange,
+    handleSubmit,
+    resetDraft,
+    closeConfirmModal
+  } = useNoteEditor();
+
+  // Note Submission (orchestrates blockchain + database + cooldown)
+  const { submitNote, isLoading, isInCooldown, cooldownTimeLeft } = useNoteSubmission({
+    walletApi,
+    provider,
+    createWebWallet,
+    walletAddress,
+    saveNoteToDatabase,
+    addNote,
+    updateNote,
+    showToast
+  });
+
+  // Simple UI handlers
+  const copyAddress = () => copy(walletAddress);
+
+  const connectWallet = async () => {
+    await handleConnectWallet(
+      (walletName) => showToast(`Successfully connected to ${walletName}`, "success"),
+      (err) => showToast(err.message || `Failed to connect`, "error")
+    );
   };
 
-  const closeModal = () => {
-    setShowModal(false);
-    setEditingNote(null);
-    setDraft({ title: "", content: "" });
-    setHasChanges(false);
-  };
+  const onSubmitNote = async () => {
+    closeConfirmModal();
+    
+    const result = await submitNote({
+      title: draft.title,
+      content: draft.content,
+      editingNote
+    });
 
-  const handleDraftChange = (field, value) => {
-    setDraft({ ...draft, [field]: value });
-    if (editingNote) {
-      const changed = value !== editingNote[field];
-      setHasChanges(changed || (field === 'title' ? draft.content !== editingNote.content : draft.title !== editingNote.title));
-    }
-  };
-
-  const copyAddress = async () => {
-    if (walletAddress) {
-      const success = await copyToClipboard(walletAddress);
-      if (success) {
-        setAddressCopied(true);
-        setTimeout(() => setAddressCopied(false), 2000);
-      }
-    }
-  };
-
-  const handleWalletChange = (e) => setSelectedWallet(e.target.value);
-
-  const handleConnectWallet = async () => {
-    try {
-      await connectWallet();
-      showToast(`Successfully connected to ${selectedWallet}`, "success");
-    } catch (err) {
-      showToast(err.message || `Failed to connect to ${selectedWallet}`, "error");
-    }
-  };
-
-  const addNoteOnChain = async (e) => {
-    e.preventDefault();
-
-    // If editing and has changes, show confirmation
-    if (editingNote && hasChanges) {
-      setShowConfirmModal(true);
-      return;
-    }
-
-    await saveNoteToBlockchain();
-  };
-
-  const saveNoteToBlockchain = async () => {
-    setShowConfirmModal(false);
-
-    try {
-      checkCooldown();
-    } catch (error) {
-      showToast(error.message, "error");
-      return;
-    }
-
-    if (!walletApi) {
-      showToast("Please connect your wallet first", "error");
-      return;
-    }
-
-    const title = draft.title.trim();
-    const content = draft.content.trim();
-    if (!title && !content) return;
-
-    try {
-      setIsLoading(true);
-
-      const wallet = createWebWallet();
-      const blaze = await Blaze.from(provider, wallet);
-
-      const metadata = {
-        1: { title, content, timestamp: new Date().toISOString() },
-      };
-
-      const tx = await blaze
-        .newTransaction()
-        .payLovelace(Core.Address.fromBech32(walletAddress), 1_000_000n)
-        .complete({
-          metadata,
-          changeAddress: walletAddress,
-          utxoSelection: "auto",
-        });
-
-      const signedTx = await blaze.signTransaction(tx);
-      const txHash = await blaze.provider.postTransactionToChain(signedTx);
-
-      const newNote = { 
-        title, 
-        content, 
-        txHash, 
-        timestamp: new Date().toISOString() 
-      };
-
-      // Save to backend database
-      const noteId = await saveNoteToDatabase(newNote, editingNote);
-      if (noteId) {
-        newNote.id = noteId;
-      }
-
-      // Update notes list - replace if editing, add if new
-      if (editingNote) {
-        updateNote(editingNote.id, newNote);
-        showToast("Note updated on blockchain successfully!", "success");
-      } else {
-        addNote(newNote);
-        showToast("Note added to blockchain successfully!", "success");
-      }
-
-      setDraft({ title: "", content: "" });
+    if (result.success) {
+      resetDraft();
       closeModal();
-      startCooldown();
-    } catch (err) {
-      console.error("Failed to add note:", err);
-      showToast("Failed to add note: " + err.message, "error");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -205,7 +125,7 @@ export default function HomePage() {
                   ))}
                 </select>
                 <button
-                  onClick={handleConnectWallet}
+                  onClick={connectWallet}
                   className="btn-connect"
                   disabled={isConnecting || !selectedWallet}
                 >
@@ -226,7 +146,7 @@ export default function HomePage() {
                       {walletAddress}
                     </div>
                     <button onClick={copyAddress} className="btn-copy">
-                      {addressCopied ? "✓ Copied" : "📋 Copy"}
+                      {isCopied ? "✓ Copied" : "📋 Copy"}
                     </button>
                   </div>
                 )}
@@ -344,7 +264,7 @@ export default function HomePage() {
                   ×
                 </button>
               </div>
-              <form onSubmit={addNoteOnChain} className="modal-form">
+              <form onSubmit={(e) => handleSubmit(e, onSubmitNote)} className="modal-form">
                 <input
                   type="text"
                   placeholder="Note title"
@@ -387,13 +307,13 @@ export default function HomePage() {
 
         {/* Confirmation Modal */}
         {showConfirmModal && (
-          <div className="modal-overlay" onClick={() => setShowConfirmModal(false)}>
+          <div className="modal-overlay" onClick={closeConfirmModal}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '400px'}}>
               <div className="modal-header">
                 <h2>Confirm Changes</h2>
                 <button
                   className="modal-close"
-                  onClick={() => setShowConfirmModal(false)}
+                  onClick={closeConfirmModal}
                 >
                   ×
                 </button>
@@ -406,14 +326,14 @@ export default function HomePage() {
                 <div className="modal-actions">
                   <button
                     type="button"
-                    onClick={() => setShowConfirmModal(false)}
+                    onClick={closeConfirmModal}
                     className="btn-cancel"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
-                    onClick={saveNoteToBlockchain}
+                    onClick={onSubmitNote}
                     className="btn-submit"
                     disabled={isLoading}
                   >
