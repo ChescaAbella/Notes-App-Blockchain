@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS notes (
   title TEXT,
   content TEXT,
   updated_at TEXT DEFAULT (datetime('now')),
+  deleted_at TEXT,
+  deletion_tx_hash TEXT,
   FOREIGN KEY(user_id) REFERENCES users(id)
 );
 
