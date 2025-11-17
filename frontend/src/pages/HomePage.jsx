@@ -1,118 +1,47 @@
-import { useEffect, useState } from "react";
-import { Blockfrost, WebWallet, Blaze, Core } from "@blaze-cardano/sdk";
-import { Buffer } from "buffer";
+import { useState } from "react";
+import { Blaze, Core } from "@blaze-cardano/sdk";
 import "../styles/home.css";
 
+// Hooks
+import { useWallet } from "../hooks/useWallet";
+import { useNotes } from "../hooks/useNotes";
+import { useTransactionCooldown } from "../hooks/useTransactionCooldown";
+import { useToast } from "../hooks/useToast";
+
+// Context
+import { useBlockchain } from "../context/BlockchainProvider";
+
+// Utils
+import { copyToClipboard } from "../utils/clipboard";
+import { filterNotes } from "../utils/noteHelpers";
+
 export default function HomePage() {
-  const [notes, setNotes] = useState([]);
   const [draft, setDraft] = useState({ title: "", content: "" });
-  const [wallets, setWallets] = useState([]);
-  const [walletApi, setWalletApi] = useState(null);
-  const [selectedWallet, setSelectedWallet] = useState(null);
-  const [walletAddress, setWalletAddress] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [addressCopied, setAddressCopied] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: "", type: "" });
   const [editingNote, setEditingNote] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  const [lastTxTime, setLastTxTime] = useState(null);
-  const [cooldownTimeLeft, setCooldownTimeLeft] = useState(0);
-  const COOLDOWN_MS = 90_000; // 90 seconds
+  // Custom hooks
+  const {
+    wallets,
+    walletApi,
+    selectedWallet,
+    setSelectedWallet,
+    walletAddress,
+    isConnecting,
+    connectWallet,
+    createWebWallet,
+    isConnected
+  } = useWallet();
 
-  const isInCooldown = lastTxTime && Date.now() - lastTxTime < COOLDOWN_MS;
-
-  const [provider] = useState(
-    () =>
-      new Blockfrost({
-        network: "cardano-preview",
-        projectId: import.meta.env.VITE_BLOCKFROST_PROJECT_ID,
-      })
-  );
-
-  // Cooldown countdown effect
-  useEffect(() => {
-    if (!lastTxTime) return;
-
-    const interval = setInterval(() => {
-      const remaining = COOLDOWN_MS - (Date.now() - lastTxTime);
-
-      if (remaining <= 0) {
-        setCooldownTimeLeft(0);
-        clearInterval(interval);
-      } else {
-        setCooldownTimeLeft(Math.ceil(remaining / 1000));
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [lastTxTime]);
-
-  useEffect(() => {
-    if (window.cardano) {
-      setWallets(Object.keys(window.cardano));
-    }
-  }, []);
-
-  // Load notes from backend on mount
-  useEffect(() => {
-    const loadNotes = async () => {
-      const token = localStorage.getItem('token');
-      console.log('Loading notes - Token exists:', !!token);
-      
-      if (!token) {
-        console.warn('No token found - user not logged in');
-        return;
-      }
-
-      try {
-        const response = await fetch('http://localhost:4000/api/notes', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        console.log('Load notes response status:', response.status);
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Loaded notes from database:', data);
-          
-          // Parse the content field which contains our blockchain data
-          const parsedNotes = (data.notes || []).map(note => {
-            try {
-              const parsed = JSON.parse(note.content);
-              return {
-                id: note.id,
-                title: note.title,
-                content: parsed.content,
-                txHash: parsed.txHash,
-                timestamp: parsed.timestamp
-              };
-            } catch {
-              // If parsing fails, return as is
-              return note;
-            }
-          });
-          console.log('Parsed notes:', parsedNotes);
-          setNotes(parsedNotes);
-        } else {
-          console.error('Failed to load notes - status:', response.status);
-        }
-      } catch (error) {
-        console.error('Failed to load notes:', error);
-      }
-    };
-    loadNotes();
-  }, []);
-
-  const showToast = (message, type = "success") => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast({ show: false, message: "", type: "" }), 3000);
-  };
+  const { notes, saveNoteToDatabase, addNote, updateNote } = useNotes();
+  const { isInCooldown, cooldownTimeLeft, startCooldown, checkCooldown } = useTransactionCooldown();
+  const { toast, showToast } = useToast();
+  const { provider } = useBlockchain();
 
   const openNote = (note) => {
     setEditingNote(note);
@@ -136,39 +65,24 @@ export default function HomePage() {
     }
   };
 
-  const copyAddress = () => {
+  const copyAddress = async () => {
     if (walletAddress) {
-      navigator.clipboard.writeText(walletAddress);
-      setAddressCopied(true);
-      setTimeout(() => setAddressCopied(false), 2000);
+      const success = await copyToClipboard(walletAddress);
+      if (success) {
+        setAddressCopied(true);
+        setTimeout(() => setAddressCopied(false), 2000);
+      }
     }
   };
 
   const handleWalletChange = (e) => setSelectedWallet(e.target.value);
 
   const handleConnectWallet = async () => {
-    if (!selectedWallet) {
-      showToast("Please select a wallet first", "error");
-      return;
-    }
-
     try {
-      setIsLoading(true);
-      const api = await window.cardano[selectedWallet].enable();
-      setWalletApi(api);
-
-      const hexAddress = await api.getChangeAddress();
-      const bech32Address = Core.Address.fromBytes(
-        Buffer.from(hexAddress, "hex")
-      ).toBech32();
-      setWalletAddress(bech32Address);
-
+      await connectWallet();
       showToast(`Successfully connected to ${selectedWallet}`, "success");
     } catch (err) {
-      console.error("Wallet connection failed:", err);
-      showToast(`Failed to connect to ${selectedWallet}`, "error");
-    } finally {
-      setIsLoading(false);
+      showToast(err.message || `Failed to connect to ${selectedWallet}`, "error");
     }
   };
 
@@ -187,10 +101,10 @@ export default function HomePage() {
   const saveNoteToBlockchain = async () => {
     setShowConfirmModal(false);
 
-    const now = Date.now();
-    if (lastTxTime && now - lastTxTime < COOLDOWN_MS) {
-      const remaining = Math.ceil((COOLDOWN_MS - (now - lastTxTime)) / 1000);
-      showToast(`Please wait ${remaining}s before adding another note`, "error");
+    try {
+      checkCooldown();
+    } catch (error) {
+      showToast(error.message, "error");
       return;
     }
 
@@ -206,7 +120,7 @@ export default function HomePage() {
     try {
       setIsLoading(true);
 
-      const wallet = new WebWallet(walletApi);
+      const wallet = createWebWallet();
       const blaze = await Blaze.from(provider, wallet);
 
       const metadata = {
@@ -233,67 +147,23 @@ export default function HomePage() {
       };
 
       // Save to backend database
-      const token = localStorage.getItem('token');
-      console.log('Token exists:', !!token);
-      
-      if (token) {
-        try {
-          const noteData = {
-            title,
-            content: JSON.stringify({ content, txHash, timestamp: newNote.timestamp })
-          };
-          console.log('Saving to database:', noteData);
-          
-          // Update the existing note in the database when editing
-          let response;
-          if (editingNote && editingNote.id) {
-            response = await fetch(`http://localhost:4000/api/notes/${editingNote.id}`, {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify(noteData)
-            });
-          } else {
-            response = await fetch('http://localhost:4000/api/notes', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify(noteData)
-            });
-          }
-          
-          console.log('Database response status:', response.status);
-          const data = await response.json();
-          console.log('Database response data:', data);
-          
-          if (response.ok) {
-            newNote.id = data.note.id;
-          } else {
-            console.error('Failed to save - server error:', data);
-          }
-        } catch (error) {
-          console.error('Failed to save to database:', error);
-        }
-      } else {
-        console.warn('No token found - are you logged in?');
+      const noteId = await saveNoteToDatabase(newNote, editingNote);
+      if (noteId) {
+        newNote.id = noteId;
       }
 
       // Update notes list - replace if editing, add if new
       if (editingNote) {
-        setNotes(notes.map(n => n.id === editingNote.id ? newNote : n));
+        updateNote(editingNote.id, newNote);
         showToast("Note updated on blockchain successfully!", "success");
       } else {
-        setNotes([newNote, ...notes]);
+        addNote(newNote);
         showToast("Note added to blockchain successfully!", "success");
       }
 
       setDraft({ title: "", content: "" });
       closeModal();
-      setLastTxTime(Date.now());
+      startCooldown();
     } catch (err) {
       console.error("Failed to add note:", err);
       showToast("Failed to add note: " + err.message, "error");
@@ -302,12 +172,7 @@ export default function HomePage() {
     }
   };
 
-  const filteredNotes = notes.filter((note) => {
-    const matchesSearch =
-      note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      note.content.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  });
+  const filteredNotes = filterNotes(notes, searchQuery);
 
   return (
     <div className="notes-wrap">
@@ -320,7 +185,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          {!walletApi ? (
+          {!isConnected ? (
             <div className="wallet-connect-card">
               <div className="wallet-icon">🔐</div>
               <h3>Connect Your Wallet</h3>
@@ -330,7 +195,7 @@ export default function HomePage() {
                   value={selectedWallet || ""}
                   onChange={handleWalletChange}
                   className="wallet-select"
-                  disabled={isLoading}
+                  disabled={isConnecting}
                 >
                   <option value="">Choose Wallet</option>
                   {wallets.map((w) => (
@@ -342,9 +207,9 @@ export default function HomePage() {
                 <button
                   onClick={handleConnectWallet}
                   className="btn-connect"
-                  disabled={isLoading || !selectedWallet}
+                  disabled={isConnecting || !selectedWallet}
                 >
-                  {isLoading ? "Connecting..." : "Connect"}
+                  {isConnecting ? "Connecting..." : "Connect"}
                 </button>
               </div>
             </div>
@@ -378,7 +243,7 @@ export default function HomePage() {
           )}
         </div>
 
-        {walletApi && (
+        {isConnected && (
           <div className="stats-bar">
             <div className="stat-card">
               <div className="stat-icon">📝</div>
@@ -404,7 +269,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {walletApi && (
+        {isConnected && (
           <div className="notes-main">
             <div className="notes-header">
               <h2>My Notes</h2>
@@ -424,7 +289,7 @@ export default function HomePage() {
               <div className="empty-state-modern">
                 <div className="empty-illustration">
                   <div className="empty-circle"></div>
-                  <div className="empty-icon">📭</div>
+                  <div className="empty-icon">🔭</div>
                 </div>
                 <h3>No notes yet</h3>
                 <p>Start creating blockchain-secured notes</p>
