@@ -15,6 +15,7 @@ export default function HomePage() {
   const [showModal, setShowModal] = useState(false);
   const [addressCopied, setAddressCopied] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
+  const [filter, setFilter] = useState("all"); // all, favorites, pinned
 
   const [provider] = useState(
     () =>
@@ -88,7 +89,7 @@ export default function HomePage() {
       const blaze = await Blaze.from(provider, wallet);
 
       const metadata = {
-        1: { title, content, timestamp: new Date().toISOString() },
+        1: { title, content, timestamp: new Date().toISOString(), is_pinned: false, is_favorite: false },
       };
 
       const tx = await blaze
@@ -100,7 +101,7 @@ export default function HomePage() {
       const txHash = await blaze.provider.postTransactionToChain(signedTx);
 
       setNotes([
-        { title, content, txHash, timestamp: new Date().toISOString() },
+        { title, content, txHash, timestamp: new Date().toISOString(), is_pinned: false, is_favorite: false },
         ...notes,
       ]);
       setDraft({ title: "", content: "" });
@@ -114,12 +115,42 @@ export default function HomePage() {
     }
   };
 
-  const filteredNotes = notes.filter((note) => {
-    const matchesSearch =
-      note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      note.content.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
-  });
+  const togglePin = (txHash) => {
+    setNotes(notes.map(note =>
+      note.txHash === txHash
+        ? { ...note, is_pinned: !note.is_pinned }
+        : note
+    ));
+  };
+
+  const toggleFavorite = (txHash) => {
+    setNotes(notes.map(note =>
+      note.txHash === txHash
+        ? { ...note, is_favorite: !note.is_favorite }
+        : note
+    ));
+  };
+
+  const filteredNotes = notes
+    .filter((note) => {
+      const matchesSearch =
+        note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        note.content.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesFilter =
+        filter === "all" ||
+        (filter === "favorites" && note.is_favorite) ||
+        (filter === "pinned" && note.is_pinned);
+
+      return matchesSearch && matchesFilter;
+    })
+    .sort((a, b) => {
+      // Sort by pinned status first (pinned notes come first)
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
+      // Then sort by timestamp
+      return new Date(b.timestamp) - new Date(a.timestamp);
+    });
 
   return (
     <div className="notes-wrap">
@@ -232,6 +263,27 @@ export default function HomePage() {
               </div>
             </div>
 
+            <div className="filter-bar">
+              <button
+                className={`filter-btn ${filter === "all" ? "active" : ""}`}
+                onClick={() => setFilter("all")}
+              >
+                All Notes
+              </button>
+              <button
+                className={`filter-btn ${filter === "favorites" ? "active" : ""}`}
+                onClick={() => setFilter("favorites")}
+              >
+                ⭐ Favorites
+              </button>
+              <button
+                className={`filter-btn ${filter === "pinned" ? "active" : ""}`}
+                onClick={() => setFilter("pinned")}
+              >
+                📌 Pinned
+              </button>
+            </div>
+
             {filteredNotes.length === 0 ? (
               <div className="empty-state-modern">
                 <div className="empty-illustration">
@@ -250,10 +302,26 @@ export default function HomePage() {
             ) : (
               <div className="notes-masonry">
                 {filteredNotes.map((note, idx) => (
-                  <div key={idx} className="note-item">
+                  <div key={idx} className={`note-item ${note.is_pinned ? 'pinned' : ''}`}>
                     <div className="note-item-header">
                       <h3>{note.title || "Untitled"}</h3>
-                      <span className="chain-badge">⛓️</span>
+                      <div className="note-actions">
+                        <button
+                          className={`action-btn ${note.is_pinned ? 'active' : ''}`}
+                          onClick={() => togglePin(note.txHash)}
+                          title={note.is_pinned ? "Unpin note" : "Pin note"}
+                        >
+                          📌
+                        </button>
+                        <button
+                          className={`action-btn ${note.is_favorite ? 'active' : ''}`}
+                          onClick={() => toggleFavorite(note.txHash)}
+                          title={note.is_favorite ? "Remove from favorites" : "Add to favorites"}
+                        >
+                          {note.is_favorite ? '⭐' : '☆'}
+                        </button>
+                        <span className="chain-badge">⛓️</span>
+                      </div>
                     </div>
                     <p className="note-item-content">{note.content}</p>
                     <div className="note-item-footer">
