@@ -17,12 +17,12 @@ Now integrated with a Cardano blockchain component for additional project requir
 
 ## 🚀 Project Setup & Installation
 
-### **1️⃣ Clone the Repository**
+### 1️⃣ Clone the Repository**
 ```bash
 git clone https://github.com/ChescaAbella/Notes-App-Blockchain.git
 cd Notes-App-Blockchain
 ```
-### **2️⃣ Backend Setup
+### 2️⃣ Backend Setup
 ```bash
 cd backend
 npm install
