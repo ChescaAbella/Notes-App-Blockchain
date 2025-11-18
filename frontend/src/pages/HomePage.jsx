@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, memo } from "react";
+import { Lock, FileText, Shield, Search, Telescope, Plus, Copy, Check, CheckCircle, XCircle, Link2, ChevronDown } from "lucide-react";
 import "../styles/home.css";
 
 // Hooks
@@ -30,6 +31,11 @@ const NoteModal = memo(({
 }) => {
   if (!showModal) return null;
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSubmit(e);
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -37,7 +43,7 @@ const NoteModal = memo(({
           <h2>{editingNote ? "Selected Note" : "Create New Note"}</h2>
           <button className="modal-close" onClick={onClose}>×</button>
         </div>
-        <form onSubmit={onSubmit} className="modal-form">
+        <div className="modal-form">
           <input
             type="text"
             placeholder="Note title"
@@ -58,7 +64,8 @@ const NoteModal = memo(({
               Cancel
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={handleSubmit}
               className="btn-submit"
               disabled={isLoading || isInCooldown || (editingNote && !hasChanges)}
             >
@@ -69,7 +76,7 @@ const NoteModal = memo(({
                 : editingNote ? "Save Changes" : "Add to Blockchain"}
             </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
@@ -114,7 +121,9 @@ const NoteCard = memo(({ note, onClick }) => (
   <div className="note-item" onClick={onClick} style={{cursor: 'pointer'}}>
     <div className="note-item-header">
       <h3>{note.title || "Untitled"}</h3>
-      <span className="chain-badge">⛓️</span>
+      <span className="chain-badge">
+        <Link2 size={14} style={{display: 'inline-block', verticalAlign: 'middle'}} />
+      </span>
     </div>
     <p className="note-item-content">{note.content}</p>
     <div className="note-item-footer">
@@ -164,7 +173,6 @@ export default function HomePage() {
   const { provider } = useBlockchain();
   const { isLoading, saveNoteToBlockchain } = useBlockchainTransaction();
 
-  // Memoized callbacks to prevent unnecessary re-renders
   const openNote = useCallback((note) => {
     setEditingNote(note);
     setDraft({ title: note.title, content: note.content });
@@ -180,16 +188,18 @@ export default function HomePage() {
   }, []);
 
   const handleDraftChange = useCallback((field, value) => {
-    setDraft(prev => ({ ...prev, [field]: value }));
-    
-    // Check if there are changes compared to the editing note
-    if (editingNote) {
-      setHasChanges(prevDraft => {
-        const updatedDraft = { ...prevDraft, [field]: value };
-        return updatedDraft.title !== editingNote.title || 
-               updatedDraft.content !== editingNote.content;
-      });
-    }
+    setDraft(prev => {
+      const updated = { ...prev, [field]: value };
+      
+      if (editingNote) {
+        setHasChanges(
+          updated.title !== editingNote.title || 
+          updated.content !== editingNote.content
+        );
+      }
+      
+      return updated;
+    });
   }, [editingNote]);
 
   const copyAddress = useCallback(async () => {
@@ -289,23 +299,28 @@ export default function HomePage() {
 
           {!isConnected ? (
             <div className="wallet-connect-card">
-              <div className="wallet-icon">🔐</div>
+              <div className="wallet-icon">
+                <Lock size={64} strokeWidth={1.5} />
+              </div>
               <h3>Connect Your Wallet</h3>
               <p>Unlock blockchain-powered note-taking</p>
               <div className="wallet-actions">
-                <select
-                  value={selectedWallet || ""}
-                  onChange={handleWalletChange}
-                  className="wallet-select"
-                  disabled={isConnecting}
-                >
-                  <option value="">Choose Wallet</option>
-                  {wallets.map((w) => (
-                    <option key={w} value={w}>
-                      {w.charAt(0).toUpperCase() + w.slice(1)}
-                    </option>
-                  ))}
-                </select>
+                <div className="custom-select-wrapper">
+                  <select
+                    value={selectedWallet || ""}
+                    onChange={handleWalletChange}
+                    className="wallet-select"
+                    disabled={isConnecting}
+                  >
+                    <option value="">Choose Wallet</option>
+                    {wallets.map((w) => (
+                      <option key={w} value={w}>
+                        {w.charAt(0).toUpperCase() + w.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="select-icon" size={20} />
+                </div>
                 <button
                   onClick={handleConnectWallet}
                   className="btn-connect"
@@ -328,7 +343,15 @@ export default function HomePage() {
                       {walletAddress}
                     </div>
                     <button onClick={copyAddress} className="btn-copy">
-                      {addressCopied ? "✓ Copied" : "📋 Copy"}
+                      {addressCopied ? (
+                        <>
+                          <Check size={16} /> Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={16} /> Copy
+                        </>
+                      )}
                     </button>
                   </div>
                 )}
@@ -338,8 +361,14 @@ export default function HomePage() {
                 className="btn-create"
                 disabled={isLoading || isInCooldown}
               >
-                {isInCooldown ? `Wait ${cooldownTimeLeft}s ` : <span className="btn-icon">+</span>}
-                Create Note
+                {isInCooldown ? (
+                  `Wait ${cooldownTimeLeft}s `
+                ) : (
+                  <>
+                    <Plus size={20} strokeWidth={2.5} />
+                    Create Note
+                  </>
+                )}
               </button>
             </div>
           )}
@@ -348,21 +377,27 @@ export default function HomePage() {
         {isConnected && (
           <div className="stats-bar">
             <div className="stat-card">
-              <div className="stat-icon">📝</div>
+              <div className="stat-icon">
+                <FileText size={40} strokeWidth={1.5} />
+              </div>
               <div className="stat-content">
                 <div className="stat-value">{notes.length}</div>
                 <div className="stat-label">Total Notes</div>
               </div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">⛓️</div>
+              <div className="stat-icon">
+                <Link2 size={40} strokeWidth={1.5} />
+              </div>
               <div className="stat-content">
                 <div className="stat-value">{notes.length}</div>
                 <div className="stat-label">On-Chain</div>
               </div>
             </div>
             <div className="stat-card">
-              <div className="stat-icon">🔒</div>
+              <div className="stat-icon">
+                <Shield size={40} strokeWidth={1.5} />
+              </div>
               <div className="stat-content">
                 <div className="stat-value">100%</div>
                 <div className="stat-label">Secure</div>
@@ -383,7 +418,7 @@ export default function HomePage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="search-input-modern"
                 />
-                <span className="search-icon">🔍</span>
+                <Search className="search-icon" size={18} />
               </div>
             </div>
 
@@ -391,7 +426,9 @@ export default function HomePage() {
               <div className="empty-state-modern">
                 <div className="empty-illustration">
                   <div className="empty-circle"></div>
-                  <div className="empty-icon">🔭</div>
+                  <div className="empty-icon">
+                    <Telescope size={56} strokeWidth={1.5} />
+                  </div>
                 </div>
                 <h3>No notes yet</h3>
                 <p>Start creating blockchain-secured notes</p>
@@ -441,7 +478,7 @@ export default function HomePage() {
         {toast.show && (
           <div className={`toast toast-${toast.type}`}>
             <div className="toast-icon">
-              {toast.type === "success" ? "✓" : "✕"}
+              {toast.type === "success" ? <CheckCircle size={20} /> : <XCircle size={20} />}
             </div>
             <div className="toast-message">{toast.message}</div>
           </div>
