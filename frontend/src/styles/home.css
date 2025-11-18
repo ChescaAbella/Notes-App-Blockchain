@@ -26,6 +26,8 @@
 .hero-content {
     margin-bottom: 2rem;
     margin-top: 1rem;
+    margin-bottom: 2rem;
+    margin-top: 1rem;
 }
 
 .page-title {
@@ -893,4 +895,31 @@
 /* Reduce repaints */
 .note-item {
   contain: layout style paint;
+}
+
+/* Trash and Restore Styles */
+.action-btn.restore {
+    color: #22c55e;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.action-btn.restore:hover {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: rgba(34, 197, 94, 0.5);
+}
+
+.note-item.deleted {
+    opacity: 0.75;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.note-item.deleted .note-item-header h3 {
+    text-decoration: line-through;
+    color: #999;
 }
