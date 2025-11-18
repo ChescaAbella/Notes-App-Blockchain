@@ -100,7 +100,7 @@ app.get("/api/auth/me", auth, (req, res) => {
 // NOTES CRUD
 app.get("/api/notes", auth, (req, res) => {
     const rows = db.prepare(
-        "SELECT id, title, content, updated_at FROM notes WHERE user_id = ? ORDER BY datetime(updated_at) DESC"
+        "SELECT id, title, content, is_pinned, is_favorite, updated_at FROM notes WHERE user_id = ? ORDER BY is_pinned DESC, datetime(updated_at) DESC"
     ).all(req.userId);
     res.json({ notes: rows });
 });
@@ -111,7 +111,7 @@ app.post("/api/notes", auth, (req, res) => {
     db.prepare(
         "INSERT INTO notes (id, user_id, title, content, updated_at) VALUES (?,?,?,?,datetime('now'))"
     ).run(id, req.userId, title || "", content || "");
-    const note = db.prepare("SELECT id, title, content, updated_at FROM notes WHERE id = ?").get(id);
+    const note = db.prepare("SELECT id, title, content, is_pinned, is_favorite, updated_at FROM notes WHERE id = ?").get(id);
     res.json({ note });
 });
 
@@ -120,13 +120,37 @@ app.put("/api/notes/:id", auth, (req, res) => {
     db.prepare(
         "UPDATE notes SET title = ?, content = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?"
     ).run(title || "", content || "", req.params.id, req.userId);
-    const note = db.prepare("SELECT id, title, content, updated_at FROM notes WHERE id = ?").get(req.params.id);
+    const note = db.prepare("SELECT id, title, content, is_pinned, is_favorite, updated_at FROM notes WHERE id = ?").get(req.params.id);
     res.json({ note });
 });
 
 app.delete("/api/notes/:id", auth, (req, res) => {
     db.prepare("DELETE FROM notes WHERE id = ? AND user_id = ?").run(req.params.id, req.userId);
     res.json({ ok: true });
+});
+
+// Toggle pin status
+app.patch("/api/notes/:id/pin", auth, (req, res) => {
+    const note = db.prepare("SELECT is_pinned FROM notes WHERE id = ? AND user_id = ?").get(req.params.id, req.userId);
+    if (!note) return res.status(404).json({ message: "Note not found" });
+
+    const newPinStatus = note.is_pinned ? 0 : 1;
+    db.prepare("UPDATE notes SET is_pinned = ? WHERE id = ? AND user_id = ?").run(newPinStatus, req.params.id, req.userId);
+
+    const updatedNote = db.prepare("SELECT id, title, content, is_pinned, is_favorite, updated_at FROM notes WHERE id = ?").get(req.params.id);
+    res.json({ note: updatedNote });
+});
+
+// Toggle favorite status
+app.patch("/api/notes/:id/favorite", auth, (req, res) => {
+    const note = db.prepare("SELECT is_favorite FROM notes WHERE id = ? AND user_id = ?").get(req.params.id, req.userId);
+    if (!note) return res.status(404).json({ message: "Note not found" });
+
+    const newFavoriteStatus = note.is_favorite ? 0 : 1;
+    db.prepare("UPDATE notes SET is_favorite = ? WHERE id = ? AND user_id = ?").run(newFavoriteStatus, req.params.id, req.userId);
+
+    const updatedNote = db.prepare("SELECT id, title, content, is_pinned, is_favorite, updated_at FROM notes WHERE id = ?").get(req.params.id);
+    res.json({ note: updatedNote });
 });
 
 // CONTACT CRUD
