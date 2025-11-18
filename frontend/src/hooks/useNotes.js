@@ -28,6 +28,7 @@ export function useNotes() {
           console.log('Loaded notes from database:', data);
           
           // Parse the content field which contains our blockchain data
+          // BUT read is_pinned and is_favorite from DATABASE columns, not JSON
           const parsedNotes = (data.notes || []).map(note => {
             try {
               const parsed = JSON.parse(note.content);
@@ -37,11 +38,17 @@ export function useNotes() {
                 content: parsed.content,
                 txHash: parsed.txHash,
                 timestamp: parsed.timestamp,
-                is_pinned: parsed.is_pinned || false,  
-                is_favorite: parsed.is_favorite || false
+                // READ FROM DATABASE COLUMNS (note.is_pinned, note.is_favorite)
+                is_pinned: note.is_pinned || 0,
+                is_favorite: note.is_favorite || 0
               };
             } catch {
-              return note;
+              // If parsing fails, return as-is with database columns
+              return {
+                ...note,
+                is_pinned: note.is_pinned || 0,
+                is_favorite: note.is_favorite || 0
+              };
             }
           });
           console.log('Parsed notes:', parsedNotes);
@@ -57,8 +64,8 @@ export function useNotes() {
   }, []);
 
   const saveNoteToDatabase = async (noteData, editingNote = null) => {
-  const token = localStorage.getItem('token');
-  console.log('Token exists:', !!token);
+    const token = localStorage.getItem('token');
+    console.log('Token exists:', !!token);
     
     if (!token) {
       console.warn('No token found - are you logged in?');
@@ -66,17 +73,18 @@ export function useNotes() {
     }
 
     try {
+      // DON'T store is_pinned/is_favorite in JSON content
+      // They're stored as separate database columns
       const payload = {
         title: noteData.title,
         content: JSON.stringify({ 
           content: noteData.content, 
           txHash: noteData.txHash, 
-          timestamp: noteData.timestamp,
-          is_pinned: noteData.is_pinned || false,
-          is_favorite: noteData.is_favorite || false 
+          timestamp: noteData.timestamp
+          // REMOVED is_pinned and is_favorite from here
         })
-    };
-    console.log('Saving to database:', payload);
+      };
+      console.log('Saving to database:', payload);
       
       // If editing, update the existing note in the database
       let response;
@@ -124,33 +132,60 @@ export function useNotes() {
     setNotes(notes.map(n => n.id === noteId ? updatedNote : n));
   };
 
+  // Use the PATCH endpoints for toggling pin/favorite
   const updateNoteMetadata = async (noteId, updates) => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    const note = notes.find(n => n.id === noteId);
-    if (!note) return;
-
     try {
-      const payload = {
-        title: note.title,
-        content: JSON.stringify({ 
-          content: note.content, 
-          txHash: note.txHash, 
-          timestamp: note.timestamp,
-          is_pinned: updates.is_pinned !== undefined ? updates.is_pinned : note.is_pinned,
-          is_favorite: updates.is_favorite !== undefined ? updates.is_favorite : note.is_favorite
-        })
-      };
-
-      await fetch(`http://localhost:4000/api/notes/${noteId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
+      // Use the dedicated toggle endpoints instead of PUT
+      if (updates.is_pinned !== undefined) {
+        const response = await fetch(`http://localhost:4000/api/notes/${noteId}/pin`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Update local state with server response
+          const parsed = JSON.parse(data.note.content);
+          updateNote(noteId, {
+            id: data.note.id,
+            title: data.note.title,
+            content: parsed.content,
+            txHash: parsed.txHash,
+            timestamp: parsed.timestamp,
+            is_pinned: data.note.is_pinned,
+            is_favorite: data.note.is_favorite
+          });
+        }
+      }
+      
+      if (updates.is_favorite !== undefined) {
+        const response = await fetch(`http://localhost:4000/api/notes/${noteId}/favorite`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Update local state with server response
+          const parsed = JSON.parse(data.note.content);
+          updateNote(noteId, {
+            id: data.note.id,
+            title: data.note.title,
+            content: parsed.content,
+            txHash: parsed.txHash,
+            timestamp: parsed.timestamp,
+            is_pinned: data.note.is_pinned,
+            is_favorite: data.note.is_favorite
+          });
+        }
+      }
     } catch (error) {
       console.error('Failed to update note metadata:', error);
     }

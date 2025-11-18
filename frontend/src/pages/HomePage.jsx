@@ -250,22 +250,14 @@ export default function HomePage() {
   }, [connectWallet, selectedWallet, showToast]);
 
   const togglePin = useCallback(async (noteId) => {
-    const note = notes.find(n => n.id === noteId);
-    if (note) {
-      const updated = { ...note, is_pinned: !note.is_pinned };
-      updateNote(noteId, updated);
-      await updateNoteMetadata(noteId, { is_pinned: !note.is_pinned });
-    }
-  }, [notes, updateNote, updateNoteMetadata]);
+    // Call API first, then update state with the response
+    await updateNoteMetadata(noteId, { is_pinned: true }); // API handles the toggle
+  }, [updateNoteMetadata]);
 
   const toggleFavorite = useCallback(async (noteId) => {
-    const note = notes.find(n => n.id === noteId);
-    if (note) {
-      const updated = { ...note, is_favorite: !note.is_favorite };
-      updateNote(noteId, updated);
-      await updateNoteMetadata(noteId, { is_favorite: !note.is_favorite });
-    }
-  }, [notes, updateNote, updateNoteMetadata]);
+    // Call API first, then update state with the response
+    await updateNoteMetadata(noteId, { is_favorite: true }); // API handles the toggle
+  }, [updateNoteMetadata]);
 
   const handleSaveNote = useCallback(async () => {
     setShowConfirmModal(false);
