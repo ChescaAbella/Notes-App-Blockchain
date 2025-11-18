@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@blaze-cardano/sdk": "^0.2.44",
+    "@blockfrost/blockfrost-js": "^6.0.0",
+    "@emurgo/cardano-serialization-lib-browser": "^15.0.3",
     "axios": "^1.12.2",
     "baseline-browser-mapping": "^2.8.28",
     "bcryptjs": "^3.0.2",
@@ -18,6 +20,7 @@
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.554.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.1"
