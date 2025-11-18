@@ -29,6 +29,7 @@ const Header = () => {
         <Link to="/" className="logo" aria-label="Go to homepage">
           NoteApp
         </Link>
+
         <ul className="nav-links">
           <li>
             <a href="#features">Features</a>
@@ -37,28 +38,19 @@ const Header = () => {
             <a href="#demo">Demo</a>
           </li>
           <li>
-            {/* <a href="#about">About</a> */}
             <Link to="/about">About</Link>
-
           </li>
           <li>
             <Link to="/contact">Contact Us</Link>
           </li>
         </ul>
+
         {!isAuthed ? (
           <div className="nav-actions">
-            <button
-              type="button"
-              className="btn ghost"
-              onClick={() => nav("/signin")}
-            >
+            <button className="btn ghost" onClick={() => nav("/signin")}>
               Sign In
             </button>
-            <button
-              type="button"
-              className="btn primary"
-              onClick={() => nav("/signup")}
-            >
+            <button className="btn primary" onClick={() => nav("/signup")}>
               Sign Up
             </button>
           </div>
@@ -66,12 +58,12 @@ const Header = () => {
           <div className="nav-actions">
             <button
               type="button"
-              className="btn ghost"
-              onClick={() => nav("/home")}
+              className="btn danger"
+              onClick={() => {
+                nav("/");
+                setTimeout(() => logout(), 50);
+              }}
             >
-              Home
-            </button>
-            <button type="button" className="btn danger" onClick={logout}>
               Logout
             </button>
           </div>

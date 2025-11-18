@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 const Hero = () => {
   return (
@@ -10,9 +11,11 @@ const Hero = () => {
             The simplest way to organize your ideas, tasks, and inspirations.
             Fast, secure, and beautifully designed for modern productivity.
           </p>
-          <a href="#" className="hero-cta">
+
+          <Link to="/signup" className="hero-cta">
             Get Started Free <span>→</span>
-          </a>
+          </Link>
+
           <div className="hero-illustration">
             <div className="note-card">
               <div className="note-lines"></div>
