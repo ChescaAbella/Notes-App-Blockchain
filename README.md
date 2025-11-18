@@ -1,80 +1,55 @@
----
+# 📘 Notes App Blockchain
 
-📘 Notes App Blockchain
-
-A simple Notes Web Application with authentication and full CRUD (Create, Read, Update, Delete) features.
+A simple Notes Web Application with authentication and full CRUD (Create, Read, Update, Delete) features.  
 Now integrated with a Cardano blockchain component for additional project requirements.
 
-🛠️ Tech Stack
+---
 
-Frontend: React (Vite), JavaScript, CSS
+## 🛠️ Tech Stack
 
-Backend: Node.js (Express)
-
-Database: SQLite
-
-Authentication: JWT + bcrypt
-
-Blockchain Tools: Lace Wallet, @blaze-cardano/sdk, Blockfrost API
-
-
+**Frontend** – React (Vite), JavaScript, CSS  
+**Backend** – Node.js (Express)  
+**Database** – SQLite  
+**Authentication** – JWT + bcrypt  
+**Blockchain Tools** – Lace Wallet, @blaze-cardano/sdk, Blockfrost API
 
 ---
 
-🚀 Project Setup & Installation
+## 🚀 Project Setup & Installation
 
-1️⃣ Clone the Repository
-
+### 1️⃣ Clone the Repository**
+```bash
 git clone https://github.com/ChescaAbella/Notes-App-Blockchain.git
 cd Notes-App-Blockchain
-
-
----
-
-🔧 2️⃣ Backend Setup
-
+```
+### 2️⃣ Backend Setup
+```bash
 cd backend
 npm install
 npm run dev
+```
+➡️ Backend will run at:
+http://localhost:4000
 
-Backend will run at: http://localhost:4000
+## 🌐 Frontend Setup (with Blockchain Integration)
+### Step 1: Install Lace Wallet
 
-
----
-
-Frontend Setup (with Blockchain Integration)
-
-Step 1: Install Lace Wallet
-
-Before running the frontend, install the Lace Wallet browser extension.
+Install the Lace Wallet browser extension.
 This is required for blockchain interactions.
 
-
----
-
-Step 2: Install dependencies
-
+### Step 2: Install Frontend Dependencies
+```bash
 cd frontend
 npm install
-
-
----
-
-Step 3: Install Node polyfills for Vite
-
+```
+### Step 3: Install Node Polyfills for Vite
+```bash
 npm install --save-dev vite-plugin-node-polyfills
-
-After installation:
-
-1. Open frontend/vite.config.js
-
-
-2. Add nodePolyfills() inside the plugins array
-
----
-
-Example:
-
+```
+## After installation:
+Open frontend/vite.config.js
+Add nodePolyfills() inside the plugins array:
+```bash
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import nodePolyfills from 'vite-plugin-node-polyfills'
@@ -85,32 +60,31 @@ export default defineConfig({
     nodePolyfills(),
   ]
 })
+```
 
-
----
-
-Step 4: Install Cardano SDK
-
+### Step 4: Install Cardano SDK
+```bash
 npm i @blaze-cardano/sdk
-
-
----
-
-Step 5: Create .env file
+```
+### Step 5: Create .env File
 
 Inside /frontend, create a file named .env:
-
+```bash
 VITE_API_URL=http://localhost:4000/api
 VITE_BLOCKFROST_PROJECT_ID=<Project-id>
-
-
----
-
-Step 6: Run the frontend
-
+```
+### Step 6: Run the Frontend
+```bash
 npm run dev
+```
+➡️ Frontend will start at:
+http://localhost:5173
 
-Frontend will start at: http://localhost:5173
 
 
----
+
+
+
+
+
+
