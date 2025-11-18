@@ -90,13 +90,13 @@ const ConfirmModal = memo(({ show, isLoading, onConfirm, onCancel }) => {
 
   return (
     <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '400px'}}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '450px'}}>
         <div className="modal-header">
           <h2>Confirm Changes</h2>
           <button className="modal-close" onClick={onCancel}>×</button>
         </div>
-        <div style={{padding: '20px'}}>
-          <p style={{marginBottom: '20px', lineHeight: '1.6'}}>
+        <div style={{padding: '30px', paddingTop: '20px'}}>
+          <p style={{marginBottom: '25px', lineHeight: '1.6'}}>
             This will create a new transaction on the blockchain with the updated content. 
             The original note remains immutably stored on-chain, but this version will be displayed.
           </p>
@@ -353,23 +353,23 @@ export default function HomePage() {
                         </>
                       )}
                     </button>
+                    <button
+                      onClick={() => setShowModal(true)}
+                      className="btn-create"
+                      disabled={isLoading || isInCooldown}
+                    >
+                      {isInCooldown ? (
+                        `Wait ${cooldownTimeLeft}s `
+                      ) : (
+                        <>
+                          <Plus size={20} strokeWidth={2.5} />
+                          Create Note
+                        </>
+                      )}
+                    </button>
                   </div>
                 )}
               </div>
-              <button
-                onClick={() => setShowModal(true)}
-                className="btn-create"
-                disabled={isLoading || isInCooldown}
-              >
-                {isInCooldown ? (
-                  `Wait ${cooldownTimeLeft}s `
-                ) : (
-                  <>
-                    <Plus size={20} strokeWidth={2.5} />
-                    Create Note
-                  </>
-                )}
-              </button>
             </div>
           )}
         </div>
