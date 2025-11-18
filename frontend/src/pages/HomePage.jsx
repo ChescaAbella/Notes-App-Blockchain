@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, memo } from "react";
-import { Lock, FileText, Shield, Search, Telescope, Plus, Copy, Check, CheckCircle, XCircle, Link2, ChevronDown } from "lucide-react";
+import { Lock, FileText, Shield, Search, Telescope, Plus, Copy, Check, CheckCircle, XCircle, Link2, ChevronDown, Star, Pin } from "lucide-react";
 import "../styles/home.css";
 
 // Hooks
@@ -72,7 +72,7 @@ const NoteModal = memo(({
               {isLoading
                 ? editingNote ? "Saving..." : "Adding..."
                 : isInCooldown
-                ? `Wait ${cooldownTimeLeft}s `
+                ? `Wait ${cooldownTimeLeft}s`
                 : editingNote ? "Save Changes" : "Add to Blockchain"}
             </button>
           </div>
@@ -116,17 +116,39 @@ const ConfirmModal = memo(({ show, isLoading, onConfirm, onCancel }) => {
 
 ConfirmModal.displayName = 'ConfirmModal';
 
-// Memoized Note Card Component
-const NoteCard = memo(({ note, onClick }) => (
-  <div className="note-item" onClick={onClick} style={{cursor: 'pointer'}}>
+// Memoized Note Card Component with pin/favorite actions
+const NoteCard = memo(({ note, onClick, onTogglePin, onToggleFavorite }) => (
+  <div className={`note-item ${note.is_pinned ? 'pinned' : ''}`} style={{cursor: 'pointer'}}>
     <div className="note-item-header">
-      <h3>{note.title || "Untitled"}</h3>
-      <span className="chain-badge">
-        <Link2 size={14} style={{display: 'inline-block', verticalAlign: 'middle'}} />
-      </span>
+      <h3 onClick={onClick}>{note.title || "Untitled"}</h3>
+      <div className="note-actions">
+        <button
+          className={`action-btn ${note.is_pinned ? 'active' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onTogglePin(note.id);
+          }}
+          title={note.is_pinned ? "Unpin note" : "Pin note"}
+        >
+          <Pin size={16} fill={note.is_pinned ? "currentColor" : "none"} />
+        </button>
+        <button
+          className={`action-btn ${note.is_favorite ? 'active' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(note.id);
+          }}
+          title={note.is_favorite ? "Remove from favorites" : "Add to favorites"}
+        >
+          <Star size={16} fill={note.is_favorite ? "currentColor" : "none"} />
+        </button>
+        <span className="chain-badge">
+          <Link2 size={14} style={{display: 'inline-block', verticalAlign: 'middle'}} />
+        </span>
+      </div>
     </div>
-    <p className="note-item-content">{note.content}</p>
-    <div className="note-item-footer">
+    <p className="note-item-content" onClick={onClick}>{note.content}</p>
+    <div className="note-item-footer" onClick={onClick}>
       <span className="note-time">
         {note.timestamp
           ? new Date(note.timestamp).toLocaleDateString("en-US", {
@@ -151,20 +173,10 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [addressCopied, setAddressCopied] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: "", type: "" });
-  const [filter, setFilter] = useState("all"); // all, favorites, pinned
-
-  const [provider] = useState(
-    () =>
-      new Blockfrost({
-        network: "cardano-preview",
-        projectId: import.meta.env.VITE_BLOCKFROST_PROJECT_ID,
-      })
-  );
-
   const [editingNote, setEditingNote] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [filter, setFilter] = useState("all"); // all, favorites, pinned
 
   // Custom hooks
   const {
@@ -184,6 +196,7 @@ export default function HomePage() {
   const { provider } = useBlockchain();
   const { isLoading, saveNoteToBlockchain } = useBlockchainTransaction();
 
+  // Memoized callbacks to prevent unnecessary re-renders
   const openNote = useCallback((note) => {
     setEditingNote(note);
     setDraft({ title: note.title, content: note.content });
@@ -235,6 +248,20 @@ export default function HomePage() {
       showToast(err.message || `Failed to connect to ${selectedWallet}`, "error");
     }
   }, [connectWallet, selectedWallet, showToast]);
+
+  const togglePin = useCallback((noteId) => {
+    const note = notes.find(n => n.id === noteId);
+    if (note) {
+      updateNote(noteId, { ...note, is_pinned: !note.is_pinned });
+    }
+  }, [notes, updateNote]);
+
+  const toggleFavorite = useCallback((noteId) => {
+    const note = notes.find(n => n.id === noteId);
+    if (note) {
+      updateNote(noteId, { ...note, is_favorite: !note.is_favorite });
+    }
+  }, [notes, updateNote]);
 
   const handleSaveNote = useCallback(async () => {
     setShowConfirmModal(false);
@@ -291,85 +318,29 @@ export default function HomePage() {
     handleSaveNote();
   }, [editingNote, hasChanges, handleSaveNote]);
 
-    const title = draft.title.trim();
-    const content = draft.content.trim();
-    if (!title && !content) return;
+  // Memoized filtered notes with filter and search
+  const filteredNotes = useMemo(() => {
+    return notes
+      .filter((note) => {
+        const matchesSearch =
+          note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          note.content.toLowerCase().includes(searchQuery.toLowerCase());
 
-    try {
-      setIsLoading(true);
-      const wallet = new WebWallet(walletApi);
-      const blaze = await Blaze.from(provider, wallet);
+        const matchesFilter =
+          filter === "all" ||
+          (filter === "favorites" && note.is_favorite) ||
+          (filter === "pinned" && note.is_pinned);
 
-      const metadata = {
-        1: { title, content, timestamp: new Date().toISOString(), is_pinned: false, is_favorite: false },
-      };
-
-      const tx = await blaze
-        .newTransaction()
-        .payLovelace(Core.Address.fromBech32(walletAddress), 1_000_000n)
-        .complete({ metadata });
-
-      const signedTx = await blaze.signTransaction(tx);
-      const txHash = await blaze.provider.postTransactionToChain(signedTx);
-
-      setNotes([
-        { title, content, txHash, timestamp: new Date().toISOString(), is_pinned: false, is_favorite: false },
-        ...notes,
-      ]);
-      setDraft({ title: "", content: "" });
-      setShowModal(false);
-      showToast("Note added to blockchain successfully!", "success");
-    } catch (err) {
-      console.error("Failed to add note:", err);
-      showToast("Failed to add note: " + err.message, "error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const togglePin = (txHash) => {
-    setNotes(notes.map(note =>
-      note.txHash === txHash
-        ? { ...note, is_pinned: !note.is_pinned }
-        : note
-    ));
-  };
-
-  const toggleFavorite = (txHash) => {
-    setNotes(notes.map(note =>
-      note.txHash === txHash
-        ? { ...note, is_favorite: !note.is_favorite }
-        : note
-    ));
-  };
-
-  const filteredNotes = notes
-    .filter((note) => {
-      const matchesSearch =
-        note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        note.content.toLowerCase().includes(searchQuery.toLowerCase());
-
-      const matchesFilter =
-        filter === "all" ||
-        (filter === "favorites" && note.is_favorite) ||
-        (filter === "pinned" && note.is_pinned);
-
-      return matchesSearch && matchesFilter;
-    })
-    .sort((a, b) => {
-      // Sort by pinned status first (pinned notes come first)
-      if (a.is_pinned && !b.is_pinned) return -1;
-      if (!a.is_pinned && b.is_pinned) return 1;
-      // Then sort by timestamp
-      return new Date(b.timestamp) - new Date(a.timestamp);
-    });
-
-  // Memoized filtered notes
-  const filteredNotes = useMemo(() => 
-    filterNotes(notes, searchQuery), 
-    [notes, searchQuery]
-  );
-
+        return matchesSearch && matchesFilter;
+      })
+      .sort((a, b) => {
+        // Sort by pinned status first (pinned notes come first)
+        if (a.is_pinned && !b.is_pinned) return -1;
+        if (!a.is_pinned && b.is_pinned) return 1;
+        // Then sort by timestamp
+        return new Date(b.timestamp) - new Date(a.timestamp);
+      });
+  }, [notes, searchQuery, filter]);
 
   return (
     <div className="notes-wrap">
@@ -438,23 +409,23 @@ export default function HomePage() {
                         </>
                       )}
                     </button>
-                    <button
-                      onClick={() => setShowModal(true)}
-                      className="btn-create"
-                      disabled={isLoading || isInCooldown}
-                    >
-                      {isInCooldown ? (
-                        `Wait ${cooldownTimeLeft}s `
-                      ) : (
-                        <>
-                          <Plus size={20} strokeWidth={2.5} />
-                          Create Note
-                        </>
-                      )}
-                    </button>
                   </div>
                 )}
               </div>
+              <button
+                onClick={() => setShowModal(true)}
+                className="btn-create"
+                disabled={isLoading || isInCooldown}
+              >
+                {isInCooldown ? (
+                  `Wait ${cooldownTimeLeft}s`
+                ) : (
+                  <>
+                    <Plus size={20} strokeWidth={2.5} />
+                    Create Note
+                  </>
+                )}
+              </button>
             </div>
           )}
         </div>
@@ -518,13 +489,13 @@ export default function HomePage() {
                 className={`filter-btn ${filter === "favorites" ? "active" : ""}`}
                 onClick={() => setFilter("favorites")}
               >
-                ⭐ Favorites
+                <Star size={16} /> Favorites
               </button>
               <button
                 className={`filter-btn ${filter === "pinned" ? "active" : ""}`}
                 onClick={() => setFilter("pinned")}
               >
-                📌 Pinned
+                <Pin size={16} /> Pinned
               </button>
             </div>
 
@@ -543,57 +514,18 @@ export default function HomePage() {
                   className="btn-create-empty"
                   disabled={isInCooldown}
                 >
-                  {isInCooldown ? `Wait ${cooldownTimeLeft}s ` : "Create Your First Note"}
+                  {isInCooldown ? `Wait ${cooldownTimeLeft}s` : "Create Your First Note"}
                 </button>
               </div>
             ) : (
               <div className="notes-masonry">
                 {filteredNotes.map((note, idx) => (
-                  <div key={idx} className={`note-item ${note.is_pinned ? 'pinned' : ''}`}>
-                    <div className="note-item-header">
-                      <h3>{note.title || "Untitled"}</h3>
-                      <div className="note-actions">
-                        <button
-                          className={`action-btn ${note.is_pinned ? 'active' : ''}`}
-                          onClick={() => togglePin(note.txHash)}
-                          title={note.is_pinned ? "Unpin note" : "Pin note"}
-                        >
-                          📌
-                        </button>
-                        <button
-                          className={`action-btn ${note.is_favorite ? 'active' : ''}`}
-                          onClick={() => toggleFavorite(note.txHash)}
-                          title={note.is_favorite ? "Remove from favorites" : "Add to favorites"}
-                        >
-                          {note.is_favorite ? '⭐' : '☆'}
-                        </button>
-                        <span className="chain-badge">⛓️</span>
-                      </div>
-                    </div>
-                    <p className="note-item-content">{note.content}</p>
-                    <div className="note-item-footer">
-                      <span className="note-time">
-                        {note.timestamp
-                          ? new Date(note.timestamp).toLocaleDateString(
-                              "en-US",
-                              {
-                                month: "short",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              }
-                            )
-                          : "Just now"}
-                      </span>
-                      <span className="note-hash" title={note.txHash}>
-                        {note.txHash.slice(0, 6)}...
-                      </span>
-                    </div>
-                  </div>
                   <NoteCard 
                     key={note.id || idx} 
                     note={note} 
-                    onClick={() => openNote(note)} 
+                    onClick={() => openNote(note)}
+                    onTogglePin={togglePin}
+                    onToggleFavorite={toggleFavorite}
                   />
                 ))}
               </div>
