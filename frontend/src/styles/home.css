@@ -764,3 +764,19 @@
         min-width: auto;
     }
 }
+
+/* Add hardware acceleration for smoother animations */
+.modal-overlay {
+  will-change: opacity;
+  transform: translateZ(0);
+}
+
+.modal-content {
+  will-change: transform, opacity;
+  transform: translateZ(0);
+}
+
+/* Reduce repaints */
+.note-item {
+  contain: layout style paint;
+}
