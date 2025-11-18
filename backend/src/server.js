@@ -105,7 +105,14 @@ app.get("/api/auth/me", auth, (req, res) => {
 // NOTES CRUD
 app.get("/api/notes", auth, (req, res) => {
     const rows = db.prepare(
-        "SELECT id, title, content, updated_at FROM notes WHERE user_id = ? ORDER BY datetime(updated_at) DESC"
+        "SELECT id, title, content, updated_at, deleted_at, deletion_tx_hash, last_edit_tx_hash, is_pinned, is_favorite FROM notes WHERE user_id = ? AND deleted_at IS NULL ORDER BY datetime(updated_at) DESC"
+    ).all(req.userId);
+    res.json({ notes: rows });
+});
+
+app.get("/api/notes/trash", auth, (req, res) => {
+    const rows = db.prepare(
+        "SELECT id, title, content, updated_at, deleted_at, deletion_tx_hash, last_edit_tx_hash FROM notes WHERE user_id = ? AND deleted_at IS NOT NULL ORDER BY datetime(deleted_at) DESC"
     ).all(req.userId);
     res.json({ notes: rows });
 });
@@ -116,22 +123,54 @@ app.post("/api/notes", auth, (req, res) => {
     db.prepare(
         "INSERT INTO notes (id, user_id, title, content, updated_at) VALUES (?,?,?,?,datetime('now'))"
     ).run(id, req.userId, title || "", content || "");
-    const note = db.prepare("SELECT id, title, content, is_pinned, is_favorite, updated_at FROM notes WHERE id = ?").get(id);
+    const note = db.prepare("SELECT id, title, content, is_pinned, is_favorite, updated_at, last_edit_tx_hash FROM notes WHERE id = ?").get(id);
     res.json({ note });
 });
 
 app.put("/api/notes/:id", auth, (req, res) => {
     const { title, content, txHash } = req.body || {};
     db.prepare(
-        "UPDATE notes SET title = ?, content = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?"
-    ).run(title || "", content || "", req.params.id, req.userId);
-    const note = db.prepare("SELECT id, title, content, updated_at FROM notes WHERE id = ?").get(req.params.id);
+        "UPDATE notes SET title = ?, content = ?, updated_at = datetime('now'), last_edit_tx_hash = ? WHERE id = ? AND user_id = ?"
+    ).run(title || "", content || "", txHash || null, req.params.id, req.userId);
+    const note = db.prepare("SELECT id, title, content, updated_at, last_edit_tx_hash, deleted_at, deletion_tx_hash, is_pinned, is_favorite FROM notes WHERE id = ?").get(req.params.id);
     res.json({ note });
 });
 
 app.delete("/api/notes/:id", auth, (req, res) => {
     db.prepare("DELETE FROM notes WHERE id = ? AND user_id = ?").run(req.params.id, req.userId);
     res.json({ ok: true });
+});
+
+// Soft delete note (marks as deleted with blockchain tx hash)
+app.post("/api/notes/:id/soft-delete", auth, (req, res) => {
+    const { txHash } = req.body || {};
+    
+    if (!txHash) {
+        return res.status(400).json({ message: "Transaction hash required" });
+    }
+
+    db.prepare(
+        "UPDATE notes SET deleted_at = datetime('now'), deletion_tx_hash = ? WHERE id = ? AND user_id = ?"
+    ).run(txHash, req.params.id, req.userId);
+
+    const note = db.prepare(
+        "SELECT id, title, content, updated_at, deleted_at, deletion_tx_hash FROM notes WHERE id = ?"
+    ).get(req.params.id);
+
+    res.json({ note });
+});
+
+// Restore deleted note
+app.post("/api/notes/:id/restore", auth, (req, res) => {
+    db.prepare(
+        "UPDATE notes SET deleted_at = NULL, deletion_tx_hash = NULL WHERE id = ? AND user_id = ?"
+    ).run(req.params.id, req.userId);
+
+    const note = db.prepare(
+        "SELECT id, title, content, updated_at, deleted_at, deletion_tx_hash FROM notes WHERE id = ?"
+    ).get(req.params.id);
+
+    res.json({ note });
 });
 
 // CONTACT CRUD
