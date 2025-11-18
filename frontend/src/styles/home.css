@@ -24,7 +24,8 @@
 }
 
 .hero-content {
-    margin-bottom: 2.5rem;
+    margin-bottom: 2rem;
+    margin-top: 1rem;
 }
 
 .page-title {
@@ -52,8 +53,11 @@
 }
 
 .wallet-icon {
-    font-size: 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     margin-bottom: 1.5rem;
+    color: #667eea;
 }
 
 .wallet-connect-card h3 {
@@ -74,9 +78,30 @@
     gap: 1rem;
 }
 
+/* Custom Select Wrapper for Improved Dropdown */
+.custom-select-wrapper {
+    position: relative;
+    flex: 1;
+}
+
+.custom-select-wrapper .select-icon {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #64748b;
+    transition: all 0.3s ease;
+}
+
+.custom-select-wrapper:hover .select-icon {
+    color: #475569;
+}
+
 .wallet-select {
     flex: 1;
-    padding: 1rem 1.25rem;
+    width: 100%;
+    padding: 1rem 3rem 1rem 1.25rem;
     border: 2px solid #e2e8f0;
     border-radius: 12px;
     font-size: 1rem;
@@ -85,16 +110,33 @@
     transition: all 0.3s ease;
     color: #1e293b;
     font-weight: 500;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
 }
 
 .wallet-select:hover {
     border-color: #cbd5e1;
+    background: #f8fafc;
 }
 
 .wallet-select:focus {
     outline: none;
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    background: white;
+}
+
+.wallet-select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #f1f5f9;
+}
+
+.wallet-select option {
+    padding: 0.75rem;
+    background: white;
+    color: #1e293b;
 }
 
 .btn-connect {
@@ -198,6 +240,9 @@
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
 }
 
 .btn-copy:hover {
@@ -230,9 +275,9 @@
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
 }
 
-.btn-icon {
-    font-size: 1.25rem;
-    font-weight: 300;
+.btn-create:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 /* Stats Bar */
@@ -259,7 +304,10 @@
 }
 
 .stat-icon {
-    font-size: 2.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #667eea;
 }
 
 .stat-content {
@@ -330,8 +378,7 @@
     left: 1rem;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 1.1rem;
-    opacity: 0.5;
+    color: #94a3b8;
 }
 
 /* Empty State */
@@ -359,7 +406,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    font-size: 3.5rem;
+    color: #667eea;
     opacity: 0.7;
 }
 
@@ -392,6 +439,11 @@
 .btn-create-empty:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+.btn-create-empty:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 /* Notes Masonry */
@@ -440,6 +492,9 @@
     font-size: 0.85rem;
     font-weight: 600;
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .note-item-content {
@@ -630,6 +685,63 @@
     cursor: not-allowed;
 }
 
+/* Toast Notification */
+.toast {
+    position: fixed;
+    top: 100px;
+    right: 2rem;
+    background: white;
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    z-index: 10000;
+    animation: slideInRight 0.3s ease, fadeOut 0.3s ease 2.7s;
+    min-width: 300px;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+.toast-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toast-success .toast-icon {
+    color: #10b981;
+}
+
+.toast-error .toast-icon {
+    color: #ef4444;
+}
+
+.toast-message {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #1e293b;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .notes-container {
@@ -646,11 +758,6 @@
 
     .wallet-actions {
         flex-direction: column;
-    }
-
-    .wallet-connected-card {
-        flex-direction: column;
-        text-align: center;
     }
 
     .wallet-connected-card {
@@ -691,73 +798,7 @@
     .modal-content {
         margin: 1rem;
     }
-}
 
-/* Toast Notification */
-.toast {
-    position: fixed;
-    top: 100px;
-    right: 2rem;
-    background: white;
-    padding: 1rem 1.5rem;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    z-index: 10000;
-    animation: slideInRight 0.3s ease, fadeOut 0.3s ease 2.7s;
-    min-width: 300px;
-}
-
-@keyframes slideInRight {
-    from {
-        transform: translateX(400px);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-@keyframes fadeOut {
-    from {
-        opacity: 1;
-    }
-    to {
-        opacity: 0;
-    }
-}
-
-.toast-icon {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    font-size: 1rem;
-}
-
-.toast-success .toast-icon {
-    background: #10b981;
-    color: white;
-}
-
-.toast-error .toast-icon {
-    background: #ef4444;
-    color: white;
-}
-
-.toast-message {
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: #1e293b;
-}
-
-@media (max-width: 768px) {
     .toast {
         right: 1rem;
         left: 1rem;
