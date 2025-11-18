@@ -682,7 +682,7 @@ export default function HomePage() {
                           </>
                         ) : (
                           <button
-                            className="action-btn restore"
+                            className="btn-submit"
                             onClick={(e) => {
                               e.stopPropagation();
                               setNoteToRestore(note);
@@ -753,7 +753,7 @@ export default function HomePage() {
           <div className="modal-overlay" onClick={() => setNoteToDelete(null)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '450px'}}>
               <div className="modal-header">
-                <h2>Soft Delete Note</h2>
+                <h2>Delete Note</h2>
                 <button className="modal-close" onClick={() => setNoteToDelete(null)}>×</button>
               </div>
               <div style={{padding: '30px', paddingTop: '20px'}}>
@@ -774,7 +774,7 @@ export default function HomePage() {
                     style={{background: '#ef4444'}}
                     disabled={isLoading}
                   >
-                    {isLoading ? "Deleting..." : "Soft Delete"}
+                    {isLoading ? "Deleting..." : "Delete"}
                   </button>
                 </div>
               </div>
