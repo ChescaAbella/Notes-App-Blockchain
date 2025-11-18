@@ -23,9 +23,7 @@ import { useNotes } from "../hooks/useNotes";
 import { useTransactionCooldown } from "../hooks/useTransactionCooldown";
 import { useToast } from "../hooks/useToast";
 import { useBlockchainTransaction } from "../hooks/useBlockchainTransaction";
-
-// Context
-import { useBlockchain } from "../context/BlockchainProvider";
+import { useBlockchain } from "../hooks/useBlockchain";
 
 // Utils
 import { copyToClipboard } from "../utils/clipboard";
@@ -267,7 +265,7 @@ export default function HomePage() {
       const deletionTxHash = await blaze.provider.postTransactionToChain(signedTx);
 
       // Save deletion to backend
-      const response = await api.post(`notes/${noteToDelete.id}/soft-delete`, { txHash: deletionTxHash });
+      await api.post(`notes/${noteToDelete.id}/soft-delete`, { txHash: deletionTxHash });
 
       // Update UI
       const updatedNote = { ...noteToDelete, deleted_at: new Date().toISOString(), deletion_tx_hash: deletionTxHash };
@@ -286,7 +284,7 @@ export default function HomePage() {
   const handleRestoreNote = useCallback(async (note) => {
     try {
       setIsLoading(true);
-      const response = await api.post(`notes/${note.id}/restore`);
+      await api.post(`notes/${note.id}/restore`);
 
       const restoredNote = { ...note, deleted_at: null, deletion_tx_hash: null };
       updateNote(note.id, restoredNote);

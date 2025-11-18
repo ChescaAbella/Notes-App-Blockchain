@@ -1,7 +1,6 @@
-import { createContext, useContext, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Blockfrost } from "@blaze-cardano/sdk";
-
-const BlockchainContext = createContext(null);
+import { BlockchainContext } from './blockchainContext';
 
 export function BlockchainProvider({ children }) {
   const [provider] = useState(
@@ -19,12 +18,4 @@ export function BlockchainProvider({ children }) {
       {children}
     </BlockchainContext.Provider>
   );
-}
-
-export function useBlockchain() {
-  const context = useContext(BlockchainContext);
-  if (!context) {
-    throw new Error('useBlockchain must be used within a BlockchainProvider');
-  }
-  return context;
 }
