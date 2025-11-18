@@ -19,6 +19,7 @@ export default function HomePage() {
   const [addressCopied, setAddressCopied] = useState(false);
   const [toast, setToast] = useState({ show: false, message: "", type: "" });
   const [noteToDelete, setNoteToDelete] = useState(null);
+  const [noteToEdit, setNoteToEdit] = useState(null);
 
   const [lastTxTime, setLastTxTime] = useState(null);
   const [cooldownTimeLeft, setCooldownTimeLeft] = useState(0);
@@ -214,6 +215,59 @@ export default function HomePage() {
     }
   };
 
+  const editNoteOnChain = async (note, updatedTitle, updatedContent) => {
+    const now = Date.now();
+    if (lastTxTime && now - lastTxTime < COOLDOWN_MS) {
+      const remaining = Math.ceil((COOLDOWN_MS - (now - lastTxTime)) / 1000);
+      showToast(`Please wait ${remaining}s before editing another note`, "error");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+
+      const wallet = new WebWallet(walletApi);
+      const blaze = await Blaze.from(provider, wallet);
+
+      const metadata = {
+        1: {
+          editRecord: true,
+          originalNoteId: note.txHash,
+          title: updatedTitle,
+          content: updatedContent,
+          editedAt: new Date().toISOString(),
+        },
+      };
+
+      const tx = await blaze
+        .newTransaction()
+        .payLovelace(Core.Address.fromBech32(walletAddress), 1_000_000n)
+        .complete({
+          metadata,
+          changeAddress: walletAddress,
+          utxoSelection: "auto",
+        });
+
+      const signedTx = await blaze.signTransaction(tx);
+      const editTxHash = await blaze.provider.postTransactionToChain(signedTx);
+
+      // Update backend with edit tx hash
+      await api.put(`/notes/${note.id}`, { title: updatedTitle, content: updatedContent, txHash: editTxHash });
+
+      // Update local state
+      setNotes(notes.map(n => n.id === note.id ? { ...n, title: updatedTitle, content: updatedContent, last_edit_tx_hash: editTxHash, updated_at: new Date().toISOString() } : n));
+
+      setNoteToEdit(null);
+      showToast("Note edited and recorded on blockchain!", "success");
+      setLastTxTime(Date.now());
+    } catch (err) {
+      console.error("Failed to edit note:", err);
+      showToast("Failed to edit note: " + err.message, "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const restoreNote = async (note) => {
     try {
       setIsLoading(true);
@@ -392,6 +446,14 @@ export default function HomePage() {
                           <div className="note-item-actions">
                             <span className="chain-badge">⛓️</span>
                             <button
+                              className="btn-edit-note"
+                              onClick={() => setNoteToEdit(note)}
+                              title="Edit note"
+                              disabled={isLoading}
+                            >
+                              ✏️
+                            </button>
+                            <button
                               className="btn-delete-note"
                               onClick={() => setNoteToDelete(note)}
                               title="Delete note"
@@ -489,7 +551,7 @@ export default function HomePage() {
                 </button>
               </div>
               <div className="modal-body">
-                <p>You're about to soft delete this note:</p>
+                <p>You're about to (soft) delete this note:</p>
                 <div className="note-preview">
                   <h4>{noteToDelete.title || "Untitled"}</h4>
                   <p>{noteToDelete.content}</p>
@@ -513,7 +575,59 @@ export default function HomePage() {
                   className="btn-delete-confirm"
                   disabled={isLoading || isInCooldown}
                 >
-                  {isLoading ? "Deleting..." : isInCooldown ? `Wait ${cooldownTimeLeft}s` : "Soft Delete"}
+                  {isLoading ? "Deleting..." : isInCooldown ? `Wait ${cooldownTimeLeft}s` : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Modal */}
+        {noteToEdit && (
+          <div className="modal-overlay" onClick={() => setNoteToEdit(null)}>
+            <div className="modal-content edit-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <h2>Edit Note</h2>
+                <button
+                  className="modal-close"
+                  onClick={() => setNoteToEdit(null)}
+                >
+                  ×
+                </button>
+              </div>
+              <div className="modal-body">
+                <p>Edit the note content — this will create an immutable edit record on the blockchain.</p>
+                <div className="note-preview">
+                  <input
+                    className="modal-input"
+                    value={noteToEdit.title}
+                    onChange={(e) => setNoteToEdit({ ...noteToEdit, title: e.target.value })}
+                    placeholder="Title"
+                  />
+                  <textarea
+                    className="modal-textarea"
+                    rows={8}
+                    value={noteToEdit.content}
+                    onChange={(e) => setNoteToEdit({ ...noteToEdit, content: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  onClick={() => setNoteToEdit(null)}
+                  className="btn-cancel"
+                  disabled={isLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => editNoteOnChain(noteToEdit, noteToEdit.title, noteToEdit.content)}
+                  className="btn-submit"
+                  disabled={isLoading || isInCooldown}
+                >
+                  {isLoading ? "Saving..." : isInCooldown ? `Wait ${cooldownTimeLeft}s` : "Save Changes"}
                 </button>
               </div>
             </div>

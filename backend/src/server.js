@@ -105,14 +105,14 @@ app.get("/api/auth/me", auth, (req, res) => {
 // NOTES CRUD
 app.get("/api/notes", auth, (req, res) => {
     const rows = db.prepare(
-        "SELECT id, title, content, updated_at, deleted_at, deletion_tx_hash FROM notes WHERE user_id = ? AND deleted_at IS NULL ORDER BY datetime(updated_at) DESC"
+        "SELECT id, title, content, updated_at, deleted_at, deletion_tx_hash, last_edit_tx_hash FROM notes WHERE user_id = ? AND deleted_at IS NULL ORDER BY datetime(updated_at) DESC"
     ).all(req.userId);
     res.json({ notes: rows });
 });
 
 app.get("/api/notes/trash", auth, (req, res) => {
     const rows = db.prepare(
-        "SELECT id, title, content, updated_at, deleted_at, deletion_tx_hash FROM notes WHERE user_id = ? AND deleted_at IS NOT NULL ORDER BY datetime(deleted_at) DESC"
+        "SELECT id, title, content, updated_at, deleted_at, deletion_tx_hash, last_edit_tx_hash FROM notes WHERE user_id = ? AND deleted_at IS NOT NULL ORDER BY datetime(deleted_at) DESC"
     ).all(req.userId);
     res.json({ notes: rows });
 });
@@ -128,11 +128,11 @@ app.post("/api/notes", auth, (req, res) => {
 });
 
 app.put("/api/notes/:id", auth, (req, res) => {
-    const { title, content } = req.body || {};
+    const { title, content, txHash } = req.body || {};
     db.prepare(
-        "UPDATE notes SET title = ?, content = ?, updated_at = datetime('now') WHERE id = ? AND user_id = ?"
-    ).run(title || "", content || "", req.params.id, req.userId);
-    const note = db.prepare("SELECT id, title, content, updated_at FROM notes WHERE id = ?").get(req.params.id);
+        "UPDATE notes SET title = ?, content = ?, updated_at = datetime('now'), last_edit_tx_hash = ? WHERE id = ? AND user_id = ?"
+    ).run(title || "", content || "", txHash || null, req.params.id, req.userId);
+    const note = db.prepare("SELECT id, title, content, updated_at, last_edit_tx_hash, deleted_at, deletion_tx_hash FROM notes WHERE id = ?").get(req.params.id);
     res.json({ note });
 });
 

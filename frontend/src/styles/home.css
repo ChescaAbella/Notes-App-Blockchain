@@ -808,6 +808,27 @@
     align-items: center;
 }
 
+.btn-edit-note {
+    padding: 0.4rem 0.6rem;
+    background: rgba(59, 130, 246, 0.12);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    display: none;
+}
+
+.note-item:hover .btn-edit-note {
+    display: block;
+    background: rgba(59, 130, 246, 0.2);
+}
+
+.btn-edit-note:hover {
+    background: rgba(59, 130, 246, 0.34);
+    transform: scale(1.05);
+}
+
 .btn-delete-note {
     padding: 0.4rem 0.6rem;
     background: rgba(239, 68, 68, 0.2);
