@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS notes (
   user_id TEXT NOT NULL,
   title TEXT,
   content TEXT,
+  is_pinned INTEGER DEFAULT 0,
+  is_favorite INTEGER DEFAULT 0,
   updated_at TEXT DEFAULT (datetime('now')),
   deleted_at TEXT,
   deletion_tx_hash TEXT,
