@@ -190,7 +190,7 @@ export default function HomePage() {
     isConnected
   } = useWallet();
 
-  const { notes, saveNoteToDatabase, addNote, updateNote } = useNotes();
+  const { notes, saveNoteToDatabase, addNote, updateNote, updateNoteMetadata } = useNotes();
   const { isInCooldown, cooldownTimeLeft, startCooldown, checkCooldown } = useTransactionCooldown();
   const { toast, showToast } = useToast();
   const { provider } = useBlockchain();
@@ -249,19 +249,23 @@ export default function HomePage() {
     }
   }, [connectWallet, selectedWallet, showToast]);
 
-  const togglePin = useCallback((noteId) => {
+  const togglePin = useCallback(async (noteId) => {
     const note = notes.find(n => n.id === noteId);
     if (note) {
-      updateNote(noteId, { ...note, is_pinned: !note.is_pinned });
+      const updated = { ...note, is_pinned: !note.is_pinned };
+      updateNote(noteId, updated);
+      await updateNoteMetadata(noteId, { is_pinned: !note.is_pinned });
     }
-  }, [notes, updateNote]);
+  }, [notes, updateNote, updateNoteMetadata]);
 
-  const toggleFavorite = useCallback((noteId) => {
+  const toggleFavorite = useCallback(async (noteId) => {
     const note = notes.find(n => n.id === noteId);
     if (note) {
-      updateNote(noteId, { ...note, is_favorite: !note.is_favorite });
+      const updated = { ...note, is_favorite: !note.is_favorite };
+      updateNote(noteId, updated);
+      await updateNoteMetadata(noteId, { is_favorite: !note.is_favorite });
     }
-  }, [notes, updateNote]);
+  }, [notes, updateNote, updateNoteMetadata]);
 
   const handleSaveNote = useCallback(async () => {
     setShowConfirmModal(false);

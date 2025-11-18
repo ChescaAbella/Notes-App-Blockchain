@@ -36,10 +36,11 @@ export function useNotes() {
                 title: note.title,
                 content: parsed.content,
                 txHash: parsed.txHash,
-                timestamp: parsed.timestamp
+                timestamp: parsed.timestamp,
+                is_pinned: parsed.is_pinned || false,  
+                is_favorite: parsed.is_favorite || false
               };
             } catch {
-              // If parsing fails, return as is
               return note;
             }
           });
@@ -56,8 +57,8 @@ export function useNotes() {
   }, []);
 
   const saveNoteToDatabase = async (noteData, editingNote = null) => {
-    const token = localStorage.getItem('token');
-    console.log('Token exists:', !!token);
+  const token = localStorage.getItem('token');
+  console.log('Token exists:', !!token);
     
     if (!token) {
       console.warn('No token found - are you logged in?');
@@ -70,10 +71,12 @@ export function useNotes() {
         content: JSON.stringify({ 
           content: noteData.content, 
           txHash: noteData.txHash, 
-          timestamp: noteData.timestamp 
+          timestamp: noteData.timestamp,
+          is_pinned: noteData.is_pinned || false,
+          is_favorite: noteData.is_favorite || false 
         })
-      };
-      console.log('Saving to database:', payload);
+    };
+    console.log('Saving to database:', payload);
       
       // If editing, update the existing note in the database
       let response;
@@ -121,11 +124,44 @@ export function useNotes() {
     setNotes(notes.map(n => n.id === noteId ? updatedNote : n));
   };
 
+  const updateNoteMetadata = async (noteId, updates) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const note = notes.find(n => n.id === noteId);
+    if (!note) return;
+
+    try {
+      const payload = {
+        title: note.title,
+        content: JSON.stringify({ 
+          content: note.content, 
+          txHash: note.txHash, 
+          timestamp: note.timestamp,
+          is_pinned: updates.is_pinned !== undefined ? updates.is_pinned : note.is_pinned,
+          is_favorite: updates.is_favorite !== undefined ? updates.is_favorite : note.is_favorite
+        })
+      };
+
+      await fetch(`http://localhost:4000/api/notes/${noteId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+    } catch (error) {
+      console.error('Failed to update note metadata:', error);
+    }
+  };
+
   return {
     notes,
     setNotes,
     saveNoteToDatabase,
     addNote,
-    updateNote
+    updateNote,
+    updateNoteMetadata
   };
 }
