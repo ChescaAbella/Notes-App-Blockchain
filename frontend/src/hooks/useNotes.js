@@ -36,11 +36,20 @@ export function useNotes() {
                 title: note.title,
                 content: parsed.content,
                 txHash: parsed.txHash,
-                timestamp: parsed.timestamp
+                timestamp: parsed.timestamp,
+                is_pinned: note.is_pinned,
+                is_favorite: note.is_favorite,
+                updated_at: note.updated_at,
+                deleted_at: note.deleted_at,
+                deletion_tx_hash: note.deletion_tx_hash,
+                last_edit_tx_hash: note.last_edit_tx_hash
               };
             } catch {
-              // If parsing fails, return as is
-              return note;
+              // If parsing fails, return as is with all properties
+              return {
+                ...note,
+                timestamp: note.updated_at
+              };
             }
           });
           console.log('Parsed notes:', parsedNotes);
@@ -121,11 +130,37 @@ export function useNotes() {
     setNotes(notes.map(n => n.id === noteId ? updatedNote : n));
   };
 
+  const updateNoteMetadata = async (noteId, metadata) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await fetch(`http://localhost:4000/api/notes/${noteId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(metadata)
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Updated note metadata:', data);
+      } else {
+        console.error('Failed to update metadata - status:', response.status);
+      }
+    } catch (error) {
+      console.error('Failed to update metadata:', error);
+    }
+  };
+
   return {
     notes,
     setNotes,
     saveNoteToDatabase,
     addNote,
-    updateNote
+    updateNote,
+    updateNoteMetadata
   };
 }

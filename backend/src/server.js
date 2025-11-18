@@ -149,28 +149,38 @@ app.post("/api/notes/:id/soft-delete", auth, (req, res) => {
         return res.status(400).json({ message: "Transaction hash required" });
     }
 
-    db.prepare(
-        "UPDATE notes SET deleted_at = datetime('now'), deletion_tx_hash = ? WHERE id = ? AND user_id = ?"
-    ).run(txHash, req.params.id, req.userId);
+    try {
+        db.prepare(
+            "UPDATE notes SET deleted_at = datetime('now'), deletion_tx_hash = ? WHERE id = ? AND user_id = ?"
+        ).run(txHash, req.params.id, req.userId);
 
-    const note = db.prepare(
-        "SELECT id, title, content, updated_at, deleted_at, deletion_tx_hash FROM notes WHERE id = ?"
-    ).get(req.params.id);
+        const note = db.prepare(
+            "SELECT id, title, content, updated_at, deleted_at, deletion_tx_hash FROM notes WHERE id = ?"
+        ).get(req.params.id);
 
-    res.json({ note });
+        res.json({ note });
+    } catch (err) {
+        console.error("Soft delete error:", err);
+        res.status(500).json({ message: "Failed to delete note", error: err.message });
+    }
 });
 
 // Restore deleted note
 app.post("/api/notes/:id/restore", auth, (req, res) => {
-    db.prepare(
-        "UPDATE notes SET deleted_at = NULL, deletion_tx_hash = NULL WHERE id = ? AND user_id = ?"
-    ).run(req.params.id, req.userId);
+    try {
+        db.prepare(
+            "UPDATE notes SET deleted_at = NULL, deletion_tx_hash = NULL WHERE id = ? AND user_id = ?"
+        ).run(req.params.id, req.userId);
 
-    const note = db.prepare(
-        "SELECT id, title, content, updated_at, deleted_at, deletion_tx_hash FROM notes WHERE id = ?"
-    ).get(req.params.id);
+        const note = db.prepare(
+            "SELECT id, title, content, updated_at, deleted_at, deletion_tx_hash FROM notes WHERE id = ?"
+        ).get(req.params.id);
 
-    res.json({ note });
+        res.json({ note });
+    } catch (err) {
+        console.error("Restore error:", err);
+        res.status(500).json({ message: "Failed to restore note", error: err.message });
+    }
 });
 
 // CONTACT CRUD

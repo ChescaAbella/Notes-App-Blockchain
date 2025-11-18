@@ -39,4 +39,45 @@ CREATE TABLE IF NOT EXISTS contact_messages (
 );
 `);
 
+// Add missing columns if they don't exist
+try {
+  db.exec(`
+    ALTER TABLE notes ADD COLUMN deleted_at TEXT;
+  `);
+} catch (err) {
+  // Column already exists
+}
+
+try {
+  db.exec(`
+    ALTER TABLE notes ADD COLUMN deletion_tx_hash TEXT;
+  `);
+} catch (err) {
+  // Column already exists
+}
+
+try {
+  db.exec(`
+    ALTER TABLE notes ADD COLUMN last_edit_tx_hash TEXT;
+  `);
+} catch (err) {
+  // Column already exists
+}
+
+try {
+  db.exec(`
+    ALTER TABLE notes ADD COLUMN is_pinned INTEGER DEFAULT 0;
+  `);
+} catch (err) {
+  // Column already exists
+}
+
+try {
+  db.exec(`
+    ALTER TABLE notes ADD COLUMN is_favorite INTEGER DEFAULT 0;
+  `);
+} catch (err) {
+  // Column already exists
+}
+
 export default db;
