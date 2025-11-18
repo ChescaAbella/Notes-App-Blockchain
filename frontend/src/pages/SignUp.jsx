@@ -6,12 +6,14 @@ import "../styles/auth.css";
 export default function SignUp() {
   const nav = useNavigate();
   const { signup } = useAuth();
+
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
     email: "",
     password: "",
   });
+
   const [err, setErr] = useState("");
 
   async function onSubmit(e) {
@@ -24,6 +26,7 @@ export default function SignUp() {
       email: form.email.trim(),
       password: form.password.trim(),
     };
+
     if (
       !payload.firstName ||
       !payload.lastName ||
@@ -32,12 +35,16 @@ export default function SignUp() {
     ) {
       return setErr("Please fill in all fields.");
     }
-    if (payload.password.length < 6)
+
+    if (payload.password.length < 6) {
       return setErr("Password must be at least 6 characters.");
+    }
 
     try {
       await signup(payload);
-      nav("/signin", { state: { msg: "Account created! Please sign in." } });
+      nav("/signin", {
+        state: { msg: "Account created! Please sign in." },
+      });
     } catch (e) {
       setErr(e?.response?.data?.message || "Sign up failed");
     }
@@ -47,6 +54,8 @@ export default function SignUp() {
     <div className="auth-page">
       <div className="auth-card">
         <h1 className="auth-title">Create account</h1>
+        <p className="auth-subtitle">Join us and start taking notes</p>
+
         <form className="auth-form" onSubmit={onSubmit}>
           <input
             placeholder="First name"
@@ -70,11 +79,18 @@ export default function SignUp() {
             value={form.password}
             onChange={(e) => setForm({ ...form, password: e.target.value })}
           />
-          {err && <p style={{ color: "#b91c1c", margin: "6px 0" }}>{err}</p>}
+
+          {err && (
+            <p style={{ color: "#b91c1c", margin: "6px 0", fontSize: 14 }}>
+              {err}
+            </p>
+          )}
+
           <button className="btn primary" type="submit">
             Sign Up
           </button>
         </form>
+
         <div className="auth-footer">
           <span>Already have an account?</span>
           <Link className="text-link" to="/signin">

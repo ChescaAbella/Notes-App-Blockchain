@@ -1,5 +1,20 @@
 import { useState, useCallback, useMemo, memo } from "react";
-import { Lock, FileText, Shield, Search, Telescope, Plus, Copy, Check, CheckCircle, XCircle, Link2, ChevronDown, Star, Pin } from "lucide-react";
+import {
+  Lock,
+  FileText,
+  Shield,
+  Search,
+  Telescope,
+  Plus,
+  Copy,
+  Check,
+  CheckCircle,
+  XCircle,
+  Link2,
+  ChevronDown,
+  Star,
+  Pin,
+} from "lucide-react";
 import "../styles/home.css";
 
 // Hooks
@@ -14,75 +29,84 @@ import { useBlockchain } from "../context/BlockchainProvider";
 
 // Utils
 import { copyToClipboard } from "../utils/clipboard";
-import { filterNotes } from "../utils/noteHelpers";
 
 // Memoized Modal Component - prevents re-renders when not needed
-const NoteModal = memo(({ 
-  showModal, 
-  editingNote, 
-  draft, 
-  isLoading, 
-  isInCooldown, 
-  cooldownTimeLeft, 
-  hasChanges,
-  onClose, 
-  onDraftChange, 
-  onSubmit 
-}) => {
-  if (!showModal) return null;
+const NoteModal = memo(
+  ({
+    showModal,
+    editingNote,
+    draft,
+    isLoading,
+    isInCooldown,
+    cooldownTimeLeft,
+    hasChanges,
+    onClose,
+    onDraftChange,
+    onSubmit,
+  }) => {
+    if (!showModal) return null;
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(e);
-  };
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      onSubmit(e);
+    };
 
-  return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>{editingNote ? "Selected Note" : "Create New Note"}</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
-        </div>
-        <div className="modal-form">
-          <input
-            type="text"
-            placeholder="Note title"
-            value={draft.title}
-            onChange={(e) => onDraftChange('title', e.target.value)}
-            className="modal-input"
-            autoFocus
-          />
-          <textarea
-            placeholder="Write your note..."
-            value={draft.content}
-            onChange={(e) => onDraftChange('content', e.target.value)}
-            className="modal-textarea"
-            rows="10"
-          />
-          <div className="modal-actions">
-            <button type="button" onClick={onClose} className="btn-cancel">
-              Cancel
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header">
+            <h2>{editingNote ? "Selected Note" : "Create New Note"}</h2>
+            <button className="modal-close" onClick={onClose}>
+              ×
             </button>
-            <button
-              type="button"
-              onClick={handleSubmit}
-              className="btn-submit"
-              disabled={isLoading || isInCooldown || (editingNote && !hasChanges)}
-            >
-              {isLoading
-                ? editingNote ? "Saving..." : "Adding..."
-                : isInCooldown
-                ? `Wait ${cooldownTimeLeft}s`
-                : editingNote ? "Save Changes" : "Add to Blockchain"}
-            </button>
+          </div>
+          <div className="modal-form">
+            <input
+              type="text"
+              placeholder="Note title"
+              value={draft.title}
+              onChange={(e) => onDraftChange("title", e.target.value)}
+              className="modal-input"
+              autoFocus
+            />
+            <textarea
+              placeholder="Write your note..."
+              value={draft.content}
+              onChange={(e) => onDraftChange("content", e.target.value)}
+              className="modal-textarea"
+              rows="10"
+            />
+            <div className="modal-actions">
+              <button type="button" onClick={onClose} className="btn-cancel">
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                className="btn-submit"
+                disabled={
+                  isLoading || isInCooldown || (editingNote && !hasChanges)
+                }
+              >
+                {isLoading
+                  ? editingNote
+                    ? "Saving..."
+                    : "Adding..."
+                  : isInCooldown
+                  ? `Wait ${cooldownTimeLeft}s`
+                  : editingNote
+                  ? "Save Changes"
+                  : "Add to Blockchain"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-});
+    );
+  }
+);
 
-NoteModal.displayName = 'NoteModal';
+NoteModal.displayName = "NoteModal";
 
 // Memoized Confirmation Modal
 const ConfirmModal = memo(({ show, isLoading, onConfirm, onCancel }) => {
@@ -90,21 +114,33 @@ const ConfirmModal = memo(({ show, isLoading, onConfirm, onCancel }) => {
 
   return (
     <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{maxWidth: '450px'}}>
+      <div
+        className="modal-content"
+        onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: "450px" }}
+      >
         <div className="modal-header">
           <h2>Confirm Changes</h2>
-          <button className="modal-close" onClick={onCancel}>×</button>
+          <button className="modal-close" onClick={onCancel}>
+            ×
+          </button>
         </div>
-        <div style={{padding: '30px', paddingTop: '20px'}}>
-          <p style={{marginBottom: '25px', lineHeight: '1.6'}}>
-            This will create a new transaction on the blockchain with the updated content. 
-            The original note remains immutably stored on-chain, but this version will be displayed.
+        <div style={{ padding: "30px", paddingTop: "20px" }}>
+          <p style={{ marginBottom: "25px", lineHeight: "1.6" }}>
+            This will create a new transaction on the blockchain with the
+            updated content. The original note remains immutably stored
+            on-chain, but this version will be displayed.
           </p>
           <div className="modal-actions">
             <button type="button" onClick={onCancel} className="btn-cancel">
               Cancel
             </button>
-            <button type="button" onClick={onConfirm} className="btn-submit" disabled={isLoading}>
+            <button
+              type="button"
+              onClick={onConfirm}
+              className="btn-submit"
+              disabled={isLoading}
+            >
               Confirm & Save
             </button>
           </div>
@@ -114,16 +150,19 @@ const ConfirmModal = memo(({ show, isLoading, onConfirm, onCancel }) => {
   );
 });
 
-ConfirmModal.displayName = 'ConfirmModal';
+ConfirmModal.displayName = "ConfirmModal";
 
 // Memoized Note Card Component with pin/favorite actions
 const NoteCard = memo(({ note, onClick, onTogglePin, onToggleFavorite }) => (
-  <div className={`note-item ${note.is_pinned ? 'pinned' : ''}`} style={{cursor: 'pointer'}}>
+  <div
+    className={`note-item ${note.is_pinned ? "pinned" : ""}`}
+    style={{ cursor: "pointer" }}
+  >
     <div className="note-item-header">
       <h3 onClick={onClick}>{note.title || "Untitled"}</h3>
       <div className="note-actions">
         <button
-          className={`action-btn ${note.is_pinned ? 'active' : ''}`}
+          className={`action-btn ${note.is_pinned ? "active" : ""}`}
           onClick={(e) => {
             e.stopPropagation();
             onTogglePin(note.id);
@@ -133,21 +172,28 @@ const NoteCard = memo(({ note, onClick, onTogglePin, onToggleFavorite }) => (
           <Pin size={16} fill={note.is_pinned ? "currentColor" : "none"} />
         </button>
         <button
-          className={`action-btn ${note.is_favorite ? 'active' : ''}`}
+          className={`action-btn ${note.is_favorite ? "active" : ""}`}
           onClick={(e) => {
             e.stopPropagation();
             onToggleFavorite(note.id);
           }}
-          title={note.is_favorite ? "Remove from favorites" : "Add to favorites"}
+          title={
+            note.is_favorite ? "Remove from favorites" : "Add to favorites"
+          }
         >
           <Star size={16} fill={note.is_favorite ? "currentColor" : "none"} />
         </button>
         <span className="chain-badge">
-          <Link2 size={14} style={{display: 'inline-block', verticalAlign: 'middle'}} />
+          <Link2
+            size={14}
+            style={{ display: "inline-block", verticalAlign: "middle" }}
+          />
         </span>
       </div>
     </div>
-    <p className="note-item-content" onClick={onClick}>{note.content}</p>
+    <p className="note-item-content" onClick={onClick}>
+      {note.content}
+    </p>
     <div className="note-item-footer" onClick={onClick}>
       <span className="note-time">
         {note.timestamp
@@ -166,7 +212,7 @@ const NoteCard = memo(({ note, onClick, onTogglePin, onToggleFavorite }) => (
   </div>
 ));
 
-NoteCard.displayName = 'NoteCard';
+NoteCard.displayName = "NoteCard";
 
 export default function HomePage() {
   const [draft, setDraft] = useState({ title: "", content: "" });
@@ -187,11 +233,13 @@ export default function HomePage() {
     isConnecting,
     connectWallet,
     createWebWallet,
-    isConnected
+    isConnected,
   } = useWallet();
 
-  const { notes, saveNoteToDatabase, addNote, updateNote, updateNoteMetadata } = useNotes();
-  const { isInCooldown, cooldownTimeLeft, startCooldown, checkCooldown } = useTransactionCooldown();
+  const { notes, saveNoteToDatabase, addNote, updateNote, updateNoteMetadata } =
+    useNotes();
+  const { isInCooldown, cooldownTimeLeft, startCooldown, checkCooldown } =
+    useTransactionCooldown();
   const { toast, showToast } = useToast();
   const { provider } = useBlockchain();
   const { isLoading, saveNoteToBlockchain } = useBlockchainTransaction();
@@ -211,20 +259,23 @@ export default function HomePage() {
     setHasChanges(false);
   }, []);
 
-  const handleDraftChange = useCallback((field, value) => {
-    setDraft(prev => {
-      const updated = { ...prev, [field]: value };
-      
-      if (editingNote) {
-        setHasChanges(
-          updated.title !== editingNote.title || 
-          updated.content !== editingNote.content
-        );
-      }
-      
-      return updated;
-    });
-  }, [editingNote]);
+  const handleDraftChange = useCallback(
+    (field, value) => {
+      setDraft((prev) => {
+        const updated = { ...prev, [field]: value };
+
+        if (editingNote) {
+          setHasChanges(
+            updated.title !== editingNote.title ||
+              updated.content !== editingNote.content
+          );
+        }
+
+        return updated;
+      });
+    },
+    [editingNote]
+  );
 
   const copyAddress = useCallback(async () => {
     if (walletAddress) {
@@ -236,36 +287,48 @@ export default function HomePage() {
     }
   }, [walletAddress]);
 
-  const handleWalletChange = useCallback((e) => {
-    setSelectedWallet(e.target.value);
-  }, [setSelectedWallet]);
+  const handleWalletChange = useCallback(
+    (e) => {
+      setSelectedWallet(e.target.value);
+    },
+    [setSelectedWallet]
+  );
 
   const handleConnectWallet = useCallback(async () => {
     try {
       await connectWallet();
       showToast(`Successfully connected to ${selectedWallet}`, "success");
     } catch (err) {
-      showToast(err.message || `Failed to connect to ${selectedWallet}`, "error");
+      showToast(
+        err.message || `Failed to connect to ${selectedWallet}`,
+        "error"
+      );
     }
   }, [connectWallet, selectedWallet, showToast]);
 
-  const togglePin = useCallback(async (noteId) => {
-    const note = notes.find(n => n.id === noteId);
-    if (note) {
-      const updated = { ...note, is_pinned: !note.is_pinned };
-      updateNote(noteId, updated);
-      await updateNoteMetadata(noteId, { is_pinned: !note.is_pinned });
-    }
-  }, [notes, updateNote, updateNoteMetadata]);
+  const togglePin = useCallback(
+    async (noteId) => {
+      const note = notes.find((n) => n.id === noteId);
+      if (note) {
+        const updated = { ...note, is_pinned: !note.is_pinned };
+        updateNote(noteId, updated);
+        await updateNoteMetadata(noteId, { is_pinned: !note.is_pinned });
+      }
+    },
+    [notes, updateNote, updateNoteMetadata]
+  );
 
-  const toggleFavorite = useCallback(async (noteId) => {
-    const note = notes.find(n => n.id === noteId);
-    if (note) {
-      const updated = { ...note, is_favorite: !note.is_favorite };
-      updateNote(noteId, updated);
-      await updateNoteMetadata(noteId, { is_favorite: !note.is_favorite });
-    }
-  }, [notes, updateNote, updateNoteMetadata]);
+  const toggleFavorite = useCallback(
+    async (noteId) => {
+      const note = notes.find((n) => n.id === noteId);
+      if (note) {
+        const updated = { ...note, is_favorite: !note.is_favorite };
+        updateNote(noteId, updated);
+        await updateNoteMetadata(noteId, { is_favorite: !note.is_favorite });
+      }
+    },
+    [notes, updateNote, updateNoteMetadata]
+  );
 
   const handleSaveNote = useCallback(async () => {
     setShowConfirmModal(false);
@@ -304,23 +367,38 @@ export default function HomePage() {
         },
         onError: (err) => {
           showToast("Failed to add note: " + err.message, "error");
-        }
+        },
       });
     } catch (err) {
       console.error("Transaction failed:", err);
     }
-  }, [checkCooldown, showToast, saveNoteToBlockchain, provider, createWebWallet, 
-      walletAddress, draft, saveNoteToDatabase, editingNote, updateNote, addNote, 
-      closeModal, startCooldown]);
+  }, [
+    checkCooldown,
+    showToast,
+    saveNoteToBlockchain,
+    provider,
+    createWebWallet,
+    walletAddress,
+    draft,
+    saveNoteToDatabase,
+    editingNote,
+    updateNote,
+    addNote,
+    closeModal,
+    startCooldown,
+  ]);
 
-  const addNoteOnChain = useCallback((e) => {
-    e.preventDefault();
-    if (editingNote && hasChanges) {
-      setShowConfirmModal(true);
-      return;
-    }
-    handleSaveNote();
-  }, [editingNote, hasChanges, handleSaveNote]);
+  const addNoteOnChain = useCallback(
+    (e) => {
+      e.preventDefault();
+      if (editingNote && hasChanges) {
+        setShowConfirmModal(true);
+        return;
+      }
+      handleSaveNote();
+    },
+    [editingNote, hasChanges, handleSaveNote]
+  );
 
   // Memoized filtered notes with filter and search
   const filteredNotes = useMemo(() => {
@@ -490,7 +568,9 @@ export default function HomePage() {
                 All Notes
               </button>
               <button
-                className={`filter-btn ${filter === "favorites" ? "active" : ""}`}
+                className={`filter-btn ${
+                  filter === "favorites" ? "active" : ""
+                }`}
                 onClick={() => setFilter("favorites")}
               >
                 <Star size={16} /> Favorites
@@ -518,15 +598,17 @@ export default function HomePage() {
                   className="btn-create-empty"
                   disabled={isInCooldown}
                 >
-                  {isInCooldown ? `Wait ${cooldownTimeLeft}s` : "Create Your First Note"}
+                  {isInCooldown
+                    ? `Wait ${cooldownTimeLeft}s`
+                    : "Create Your First Note"}
                 </button>
               </div>
             ) : (
               <div className="notes-masonry">
                 {filteredNotes.map((note, idx) => (
-                  <NoteCard 
-                    key={note.id || idx} 
-                    note={note} 
+                  <NoteCard
+                    key={note.id || idx}
+                    note={note}
                     onClick={() => openNote(note)}
                     onTogglePin={togglePin}
                     onToggleFavorite={toggleFavorite}
@@ -561,7 +643,11 @@ export default function HomePage() {
         {toast.show && (
           <div className={`toast toast-${toast.type}`}>
             <div className="toast-icon">
-              {toast.type === "success" ? <CheckCircle size={20} /> : <XCircle size={20} />}
+              {toast.type === "success" ? (
+                <CheckCircle size={20} />
+              ) : (
+                <XCircle size={20} />
+              )}
             </div>
             <div className="toast-message">{toast.message}</div>
           </div>

@@ -1,66 +1,97 @@
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
 
+/* Header glass style */
+header {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
 
-        header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease;
-        }
+nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+}
 
-        nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 0;
-        }
+/* Logo */
+.logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #6366f1;
+    text-decoration: none;
+}
 
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #6366f1;
-            text-decoration: none;
-        }
+/* Nav links */
+.nav-links {
+    display: flex;
+    list-style: none;
+    gap: 2rem;
+}
 
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            list-style: none;
-        }
+.nav-links a {
+    text-decoration: none;
+    color: #64748b;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
 
-        .nav-links a {
-            text-decoration: none;
-            color: #64748b;
-            font-weight: 500;
-            transition: color 0.3s ease;
-        }
+.nav-links a:hover {
+    color: #6366f1;
+}
 
-        .nav-links a:hover {
-            color: #6366f1;
-        }
+/* Button system (clean unified) */
+.nav-actions {
+    display: flex;
+    gap: 12px;
+}
 
-        .nav-cta {
-            background: #6366f1;
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            border: none;
-            cursor: pointer;
-        }
+.nav-actions .btn {
+    padding: 0.6rem 1.3rem;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.25s ease;
+}
 
-        .nav-cta:hover {
-            background: #4f46e5;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-        }
+/* Sign In = ghost */
+.nav-actions .btn.ghost {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+.nav-actions .btn.ghost:hover {
+    background: #e2e8f0;
+    transform: translateY(-2px);
+}
+
+/* Sign Up = purple gradient (matches auth pages) */
+.nav-actions .btn.primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0px 8px 22px rgba(102, 126, 234, 0.35);
+}
+.nav-actions .btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0px 12px 28px rgba(118, 75, 162, 0.55);
+}
+
+/* Logout = soft red → bright red hover */
+.nav-actions .btn.danger {
+    background: #ffe5e5;
+    color: #b91c1c;
+}
+.nav-actions .btn.danger:hover {
+    background: #ef4444;
+    color: white;
+}
