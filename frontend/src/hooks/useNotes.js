@@ -1,23 +1,27 @@
 import { useState, useEffect } from 'react';
+import { useWallet } from './useWallet';
 
 export function useNotes() {
   const [notes, setNotes] = useState([]);
+  const { walletAddress, isConnected } = useWallet();
 
-  // Load notes from backend on mount
+  // Load notes from backend on mount or when wallet connects
   useEffect(() => {
     const loadNotes = async () => {
-      const token = localStorage.getItem('token');
-      console.log('Loading notes - Token exists:', !!token);
+      console.log('Loading notes - Wallet connected:', isConnected);
+      console.log('Wallet address:', walletAddress);
       
-      if (!token) {
-        console.warn('No token found - user not logged in');
+      if (!isConnected || !walletAddress) {
+        console.warn('Wallet not connected - cannot load notes');
+        setNotes([]); // Clear notes when wallet disconnects
         return;
       }
 
       try {
-        const response = await fetch('http://localhost:4000/api/notes', {
+        // Use wallet address instead of token for authentication
+        const response = await fetch(`http://localhost:4000/api/notes/wallet/${walletAddress}`, {
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Content-Type': 'application/json'
           }
         });
         
@@ -54,6 +58,10 @@ export function useNotes() {
           });
           console.log('Parsed notes:', parsedNotes);
           setNotes(parsedNotes);
+        } else if (response.status === 404) {
+          // No notes found for this wallet - that's okay
+          console.log('No notes found for this wallet address');
+          setNotes([]);
         } else {
           console.error('Failed to load notes - status:', response.status);
         }
@@ -61,20 +69,22 @@ export function useNotes() {
         console.error('Failed to load notes:', error);
       }
     };
+    
     loadNotes();
-  }, []);
+  }, [walletAddress, isConnected]);
 
   const saveNoteToDatabase = async (noteData, editingNote = null) => {
-    const token = localStorage.getItem('token');
-    console.log('Token exists:', !!token);
+    console.log('Wallet address:', walletAddress);
+    console.log('Is connected:', isConnected);
     
-    if (!token) {
-      console.warn('No token found - are you logged in?');
+    if (!isConnected || !walletAddress) {
+      console.warn('Wallet not connected - cannot save note');
       return null;
     }
 
     try {
       const payload = {
+        wallet_address: walletAddress,
         title: noteData.title,
         content: JSON.stringify({ 
           content: noteData.content, 
@@ -92,17 +102,18 @@ export function useNotes() {
         response = await fetch(`http://localhost:4000/api/notes/${editingNote.id}`, {
           method: 'PUT',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Content-Type': 'application/json'
           },
-          body: JSON.stringify(payload)
+          body: JSON.stringify({
+            ...payload,
+            wallet_address: walletAddress // Ensure wallet address is sent for verification
+          })
         });
       } else {
         response = await fetch('http://localhost:4000/api/notes', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+            'Content-Type': 'application/json'
           },
           body: JSON.stringify(payload)
         });
@@ -133,14 +144,17 @@ export function useNotes() {
   };
 
   const updateNoteMetadata = async (noteId, updates) => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!isConnected || !walletAddress) {
+      console.warn('Wallet not connected - cannot update metadata');
+      return;
+    }
 
     const note = notes.find(n => n.id === noteId);
     if (!note) return;
 
     try {
       const payload = {
+        wallet_address: walletAddress,
         title: note.title,
         content: JSON.stringify({ 
           content: note.content, 
@@ -154,8 +168,7 @@ export function useNotes() {
       const response = await fetch(`http://localhost:4000/api/notes/${noteId}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
       });
