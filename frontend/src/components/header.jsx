@@ -1,11 +1,22 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useWallet } from "../hooks/useWallet";
+import { ChevronDown, Copy, Check } from "lucide-react";
+import { copyToClipboard } from "../utils/clipboard";
 import "../styles/header.css";
 
 const Header = () => {
-  const nav = useNavigate();
-  const { isAuthed, logout } = useAuth();
+  const navigate = useNavigate();
+  const [addressCopied, setAddressCopied] = useState(false);
+  const {
+    wallets,
+    selectedWallet,
+    setSelectedWallet,
+    walletAddress,
+    isConnecting,
+    connectWallet,
+    isConnected
+  } = useWallet();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -22,6 +33,30 @@ const Header = () => {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const handleWalletChange = useCallback((e) => {
+    setSelectedWallet(e.target.value);
+  }, [setSelectedWallet]);
+
+  const handleConnectWallet = useCallback(async () => {
+    try {
+      await connectWallet();
+      // Navigate to home page after successful connection
+      navigate('/home');
+    } catch (err) {
+      console.error("Failed to connect wallet:", err);
+    }
+  }, [connectWallet, navigate]);
+
+  const copyAddress = useCallback(async () => {
+    if (walletAddress) {
+      const success = await copyToClipboard(walletAddress);
+      if (success) {
+        setAddressCopied(true);
+        setTimeout(() => setAddressCopied(false), 2000);
+      }
+    }
+  }, [walletAddress]);
 
   return (
     <header className="site-header">
@@ -43,29 +78,50 @@ const Header = () => {
           <li>
             <Link to="/contact">Contact Us</Link>
           </li>
+          {isConnected && (
+            <li>
+              <Link to="/home">My Notes</Link>
+            </li>
+          )}
         </ul>
 
-        {!isAuthed ? (
+        {!isConnected ? (
           <div className="nav-actions">
-            <button className="btn ghost" onClick={() => nav("/signin")}>
-              Sign In
-            </button>
-            <button className="btn primary" onClick={() => nav("/signup")}>
-              Sign Up
+            <div className="custom-select-wrapper">
+              <select
+                value={selectedWallet || ""}
+                onChange={handleWalletChange}
+                className="wallet-select"
+                disabled={isConnecting}
+              >
+                <option value="">Choose Wallet</option>
+                {wallets.map((w) => (
+                  <option key={w} value={w}>
+                    {w.charAt(0).toUpperCase() + w.slice(1)}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="select-icon" size={20} />
+            </div>
+            <button
+              onClick={handleConnectWallet}
+              className="btn primary"
+              disabled={isConnecting || !selectedWallet}
+            >
+              {isConnecting ? "Connecting..." : "Connect Wallet"}
             </button>
           </div>
         ) : (
-          <div className="nav-actions">
-            <button
-              type="button"
-              className="btn danger"
-              onClick={() => {
-                nav("/");
-                setTimeout(() => logout(), 50);
-              }}
-            >
-              Logout
-            </button>
+          <div className="nav-actions wallet-connected">
+            <div className="wallet-address-display">
+              <span className="wallet-label">Connected:</span>
+              <span className="wallet-address-short" title={walletAddress}>
+                {walletAddress ? `${walletAddress.slice(0, 8)}...${walletAddress.slice(-6)}` : ''}
+              </span>
+              <button onClick={copyAddress} className="btn-copy-small">
+                {addressCopied ? <Check size={14} /> : <Copy size={14} />}
+              </button>
+            </div>
           </div>
         )}
       </nav>
