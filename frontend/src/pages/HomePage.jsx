@@ -9,6 +9,7 @@ import {
   Link2,
   Star,
   Pin,
+  Trash2,
 } from "lucide-react";
 import "../styles/home.css";
 
@@ -413,9 +414,16 @@ export default function HomePage() {
               <button
                 className={`filter-btn ${showTrash ? "active" : ""}`}
                 onClick={() => setShowTrash(!showTrash)}
-                style={{ marginLeft: 'auto' }}
+                style={{
+                  marginLeft: 'auto',
+                  color: 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
               >
-                🗑️ Trash
+                <Trash2 size={16} />
+                Trash
               </button>
             </div>
 

@@ -533,6 +533,10 @@
     border: 1px solid var(--border);
     transition: all 0.3s ease;
     cursor: pointer;
+
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
 .note-item.pinned {
@@ -565,7 +569,21 @@
     color: var(--text-light);
     line-height: 1.4;
     flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    position: relative;
+    -webkit-mask-image: linear-gradient(
+        to right,
+        black 70%,
+        transparent 100%
+    );
+    mask-image: linear-gradient(
+        to right,
+        black 70%,
+        transparent 100%
+    );
 }
+
 
 .note-actions {
     display: flex;
@@ -582,6 +600,7 @@
     border-radius: 6px;
     transition: all 0.2s ease;
     opacity: 0.6;
+    color:#06b6d4;
 }
 
 .action-btn:hover {
@@ -611,9 +630,22 @@
     font-size: 0.95rem;
     color: var(--text-muted);
     line-height: 1.6;
-    margin-bottom: 1.25rem;
     white-space: pre-wrap;
     word-break: break-word;
+    max-height: 70px;
+    overflow: hidden;
+    position: relative;
+    flex-grow: 1;
+    -webkit-mask-image: linear-gradient(
+        to bottom,
+        black 70%,
+        transparent 100%
+    );
+    mask-image: linear-gradient(
+        to bottom,
+        black 70%,
+        transparent 100%
+    );
 }
 
 .note-item-footer {
@@ -622,6 +654,7 @@
     align-items: center;
     padding-top: 1rem;
     border-top: 1px solid var(--border);
+    margin-top: auto;
 }
 
 .note-time {
