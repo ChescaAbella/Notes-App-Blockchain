@@ -42,7 +42,7 @@ export function useNotes() {
                 timestamp: parsed.timestamp,
                 is_pinned: note.is_pinned || parsed.is_pinned || false,
                 is_favorite: note.is_favorite || parsed.is_favorite || false,
-                status: note.status || 'pending',
+                status: note.status || 'pending', // Always include status
                 updated_at: note.updated_at,
                 deleted_at: note.deleted_at,
                 deletion_tx_hash: note.deletion_tx_hash,
@@ -52,7 +52,8 @@ export function useNotes() {
               // If parsing fails, return as is with all properties
               return {
                 ...note,
-                timestamp: note.updated_at || note.timestamp
+                timestamp: note.updated_at || note.timestamp,
+                status: note.status || 'pending' // Ensure status is always present
               };
             }
           });
@@ -76,6 +77,7 @@ export function useNotes() {
   const saveNoteToDatabase = async (noteData, editingNote = null) => {
     console.log('Wallet address:', walletAddress);
     console.log('Is connected:', isConnected);
+    console.log('Saving note with data:', noteData);
 
     if (!isConnected || !walletAddress) {
       console.warn('Wallet not connected - cannot save note');
@@ -93,7 +95,8 @@ export function useNotes() {
           is_pinned: noteData.is_pinned || false,
           is_favorite: noteData.is_favorite || false
         }),
-        txHash: noteData.txHash // Store tx hash at root level too
+        txHash: noteData.txHash, // Store tx hash at root level too
+        status: noteData.status || 'pending' // Explicitly set status
       };
       console.log('Saving to database:', payload);
 
@@ -134,7 +137,12 @@ export function useNotes() {
   };
 
   const addNote = (newNote) => {
-    setNotes([newNote, ...notes]);
+    // Ensure the new note has status set
+    const noteWithStatus = {
+      ...newNote,
+      status: newNote.status || 'pending'
+    };
+    setNotes([noteWithStatus, ...notes]);
   };
 
   const updateNote = (noteId, updatedNote) => {

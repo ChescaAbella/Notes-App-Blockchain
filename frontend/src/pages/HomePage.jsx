@@ -10,6 +10,7 @@ import {
   Star,
   Pin,
   Trash2,
+  RefreshCw,
 } from "lucide-react";
 import "../styles/home.css";
 
@@ -26,6 +27,7 @@ import NoteModal from "../components/NoteModal";
 import ConfirmModal from "../components/ConfirmModal";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 import RestoreConfirmModal from "../components/RestoreConfirmModal";
+import SyncModal from "../components/SyncModal";
 import NoteCard from "../components/NoteCard";
 import EmptyState from "../components/EmptyState";
 import Toast from "../components/Toast";
@@ -33,6 +35,7 @@ import Footer from "../components/footer";
 
 // Services
 import { startTransactionMonitoring } from "../services/transactionConfirmation";
+import { recoverNotesFromBlockchain, saveRecoveredNotesToDatabase } from "../services/blockchainSync";
 
 export default function HomePage() {
   // State
@@ -46,6 +49,12 @@ export default function HomePage() {
   const [noteToDelete, setNoteToDelete] = useState(null);
   const [showTrash, setShowTrash] = useState(false);
   const [noteToRestore, setNoteToRestore] = useState(null);
+
+  // Sync state
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState(null);
+  const [syncResult, setSyncResult] = useState(null);
 
   // Hooks
   const { walletAddress, createWebWallet, isConnected } = useWallet();
@@ -309,6 +318,65 @@ export default function HomePage() {
     }
   }, [walletAddress, updateNote, showToast]);
 
+  // Sync from Blockchain
+  const handleSyncFromBlockchain = useCallback(async () => {
+    setIsSyncing(true);
+    setSyncProgress(null);
+    setSyncResult(null);
+
+    try {
+      // Step 1: Recover notes from blockchain
+      const recoveryResult = await recoverNotesFromBlockchain(
+        walletAddress,
+        (current, total) => {
+          setSyncProgress({ current, total });
+        }
+      );
+
+      if (!recoveryResult.success) {
+        setSyncResult(recoveryResult);
+        setIsSyncing(false);
+        return;
+      }
+
+      // Step 2: Save recovered notes to database
+      const saveResult = await saveRecoveredNotesToDatabase(
+        recoveryResult.notes,
+        walletAddress
+      );
+
+      // Step 3: Show results
+      setSyncResult({
+        ...recoveryResult,
+        saveResult
+      });
+
+      // Step 4: Reload notes if any were saved
+      if (saveResult.savedCount > 0) {
+        // Trigger notes reload by updating a state or refetching
+        window.location.reload(); // Simple approach - you can improve this
+      }
+
+    } catch (error) {
+      console.error('Sync failed:', error);
+      setSyncResult({
+        success: false,
+        notesRecovered: 0,
+        message: `Sync failed: ${error.message}`
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [walletAddress]);
+
+  const closeSyncModal = useCallback(() => {
+    if (!isSyncing) {
+      setShowSyncModal(false);
+      setSyncResult(null);
+      setSyncProgress(null);
+    }
+  }, [isSyncing]);
+
   // Filtered Notes
   const filteredNotes = useMemo(() => {
     let filtered = showTrash
@@ -386,6 +454,15 @@ export default function HomePage() {
                     Create Note
                   </>
                 )}
+              </button>
+              <button
+                onClick={() => setShowSyncModal(true)}
+                className="btn-sync"
+                disabled={blockchainLoading || isSyncing}
+                title="Sync notes from blockchain"
+              >
+                <RefreshCw size={20} strokeWidth={2.5} />
+                Sync from Chain
               </button>
             </div>
           </div>
@@ -535,6 +612,15 @@ export default function HomePage() {
             note={noteToRestore}
             onConfirm={() => handleRestoreNote(noteToRestore)}
             onCancel={() => setNoteToRestore(null)}
+          />
+
+          <SyncModal
+            show={showSyncModal}
+            isLoading={isSyncing}
+            progress={syncProgress}
+            result={syncResult}
+            onClose={closeSyncModal}
+            onConfirm={handleSyncFromBlockchain}
           />
 
           {/* Toast */}
