@@ -174,6 +174,9 @@ export default function HomePage() {
       return;
     }
 
+    // Close the modal immediately for better UX
+    setNoteToDelete(null);
+
     try {
       await saveNoteToBlockchain({
         provider,
@@ -184,10 +187,7 @@ export default function HomePage() {
         action: "delete",
         noteId: noteToDelete.id,
         onSuccess: async (result) => {
-          await api.post(`notes/${noteToDelete.id}/soft-delete`, { 
-            txHash: result.txHash 
-          });
-
+          // Mark note as deleted locally without making API call
           const updatedNote = { 
             ...noteToDelete, 
             deleted_at: new Date().toISOString(), 
@@ -196,7 +196,6 @@ export default function HomePage() {
           updateNote(noteToDelete.id, updatedNote);
 
           showToast("Note deleted successfully!", "success");
-          setNoteToDelete(null);
           startCooldown();
         },
         onError: (err) => showToast("Failed to delete note: " + err.message, "error")

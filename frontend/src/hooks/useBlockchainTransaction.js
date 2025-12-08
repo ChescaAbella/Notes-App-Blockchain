@@ -100,6 +100,15 @@ export function useBlockchainTransaction() {
         Core.Metadatum.newText(new Date().toISOString())
       );
       
+      // INSERT DESCRIPTION FOR DELETE ACTIONS
+      if (action === "delete") {
+        const deleteMessage = `Deleted ${trimmedTitle}`;
+        metadatumMap.insert(
+          Core.Metadatum.newText("description"),
+          formatContent(deleteMessage)
+        );
+      }
+      
       // OPTIONAL: INSERT 'NOTE_ID' IF PROVIDED (USEFUL FOR UPDATE/DELETE)
       if (noteId) {
         metadatumMap.insert(
