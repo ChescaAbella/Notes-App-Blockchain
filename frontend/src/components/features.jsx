@@ -1,25 +1,21 @@
 import React, { useEffect } from "react";
+import { Shield, Link2, Database, Zap } from "lucide-react";
 
 const features = [
   {
-    icon: "🔒",
-    title: "Secure & Private",
-    desc: "Your notes are encrypted and protected with secure login. Only you have access to your thoughts and ideas.",
+    icon: Shield,
+    title: "Immutable & Secure",
+    desc: "Notes are permanently stored on Cardano blockchain. Once written, they cannot be altered or deleted by anyone.",
   },
   {
-    icon: "📁",
-    title: "Smart Organization",
-    desc: "Organize your notes with categories, tags, and folders. Find what you need instantly with powerful search.",
+    icon: Link2,
+    title: "Decentralized Storage",
+    desc: "No central server, no single point of failure. Your notes exist on a distributed network of nodes worldwide.",
   },
   {
-    icon: "☁️",
-    title: "Cloud Sync",
-    desc: "Access your notes from any device. Changes sync automatically so your thoughts are always up to date.",
-  },
-  {
-    icon: "⚡",
-    title: "Fast & Simple",
-    desc: "Clean, distraction-free interface that loads instantly. Focus on your ideas, not the app.",
+    icon: Database,
+    title: "On-Chain Metadata",
+    desc: "Every note is a blockchain transaction with metadata. View transaction hashes and verify authenticity on-chain.",
   },
 ];
 
@@ -50,13 +46,18 @@ const Features = () => {
       <div className="container">
         <h2>Everything you need to stay organized</h2>
         <div className="features-grid">
-          {features.map((f, i) => (
-            <div className="feature-card" key={i}>
-              <div className="feature-icon">{f.icon}</div>
-              <h3>{f.title}</h3>
-              <p>{f.desc}</p>
-            </div>
-          ))}
+          {features.map((f, i) => {
+            const IconComponent = f.icon;
+            return (
+              <div className="feature-card" key={i}>
+                <div className="feature-icon">
+                  <IconComponent size={28} />
+                </div>
+                <h3>{f.title}</h3>
+                <p>{f.desc}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

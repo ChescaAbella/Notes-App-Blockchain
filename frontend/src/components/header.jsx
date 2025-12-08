@@ -15,7 +15,7 @@ const Header = () => {
     walletAddress,
     isConnecting,
     connectWallet,
-    isConnected
+    isConnected,
   } = useWallet();
 
   useEffect(() => {
@@ -34,15 +34,18 @@ const Header = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleWalletChange = useCallback((e) => {
-    setSelectedWallet(e.target.value);
-  }, [setSelectedWallet]);
+  const handleWalletChange = useCallback(
+    (e) => {
+      setSelectedWallet(e.target.value);
+    },
+    [setSelectedWallet]
+  );
 
   const handleConnectWallet = useCallback(async () => {
     try {
       await connectWallet();
       // Navigate to home page after successful connection
-      navigate('/home');
+      navigate("/home");
     } catch (err) {
       console.error("Failed to connect wallet:", err);
     }
@@ -71,12 +74,6 @@ const Header = () => {
           </li>
           <li>
             <a href="#demo">Demo</a>
-          </li>
-          <li>
-            <Link to="/about">About</Link>
-          </li>
-          <li>
-            <Link to="/contact">Contact Us</Link>
           </li>
           {isConnected && (
             <li>
@@ -116,7 +113,9 @@ const Header = () => {
             <div className="wallet-address-display">
               <span className="wallet-label">Connected:</span>
               <span className="wallet-address-short" title={walletAddress}>
-                {walletAddress ? `${walletAddress.slice(0, 8)}...${walletAddress.slice(-6)}` : ''}
+                {walletAddress
+                  ? `${walletAddress.slice(0, 8)}...${walletAddress.slice(-6)}`
+                  : ""}
               </span>
               <button onClick={copyAddress} className="btn-copy-small">
                 {addressCopied ? <Check size={14} /> : <Copy size={14} />}
