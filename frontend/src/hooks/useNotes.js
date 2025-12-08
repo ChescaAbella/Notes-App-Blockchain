@@ -42,7 +42,8 @@ export function useNotes() {
                 timestamp: parsed.timestamp,
                 is_pinned: note.is_pinned || parsed.is_pinned || false,
                 is_favorite: note.is_favorite || parsed.is_favorite || false,
-                status: note.status || 'pending', // Always include status
+                // FIXED: Set status based on database value, default to 'confirmed' for existing notes
+                status: note.status || 'confirmed',
                 updated_at: note.updated_at,
                 deleted_at: note.deleted_at,
                 deletion_tx_hash: note.deletion_tx_hash,
@@ -53,7 +54,8 @@ export function useNotes() {
               return {
                 ...note,
                 timestamp: note.updated_at || note.timestamp,
-                status: note.status || 'pending' // Ensure status is always present
+                // FIXED: Default to 'confirmed' for existing notes from database
+                status: note.status || 'confirmed'
               };
             }
           });
@@ -96,7 +98,8 @@ export function useNotes() {
           is_favorite: noteData.is_favorite || false
         }),
         txHash: noteData.txHash, // Store tx hash at root level too
-        status: noteData.status || 'pending' // Explicitly set status
+        status: noteData.status || 'pending', // Explicitly set status
+        last_edit_tx_hash: noteData.last_edit_tx_hash || null // Track edit transaction
       };
       console.log('Saving to database:', payload);
 

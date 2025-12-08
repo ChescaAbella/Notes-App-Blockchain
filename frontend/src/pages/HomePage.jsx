@@ -54,11 +54,10 @@ export default function HomePage() {
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState(null);
-  const [syncResult, setSyncResult] = useState(null);
 
   // Hooks
   const { walletAddress, createWebWallet, isConnected } = useWallet();
-  const { notes, saveNoteToDatabase, addNote, updateNote, updateNoteMetadata } = useNotes();
+  const { notes, saveNoteToDatabase, addNote, updateNote, updateNoteMetadata, setNotes } = useNotes();
   const { isInCooldown, cooldownTimeLeft, startCooldown, checkCooldown } = useTransactionCooldown();
   const { toast, showToast } = useToast();
   const { provider } = useBlockchain();
@@ -67,6 +66,10 @@ export default function HomePage() {
   // Monitor pending transactions and update their status
   useEffect(() => {
     if (!isConnected || !walletAddress || notes.length === 0) return;
+
+    // Only monitor notes with pending status
+    const pendingNotes = notes.filter(n => n.status === 'pending');
+    if (pendingNotes.length === 0) return;
 
     const handleStatusUpdate = async (noteId, newStatus) => {
       console.log(`Updating note ${noteId} status to ${newStatus}`);
@@ -201,12 +204,16 @@ export default function HomePage() {
         action: editingNote ? "update" : "create",
         noteId: editingNote?.id,
         onSuccess: async (note) => {
+          // Set status to pending for new transactions
+          note.status = 'pending';
+
           const noteId = await saveNoteToDatabase(note, editingNote);
           if (noteId) note.id = noteId;
 
           if (editingNote) {
             note.is_pinned = editingNote.is_pinned;
             note.is_favorite = editingNote.is_favorite;
+            note.last_edit_tx_hash = note.txHash;
             updateNote(editingNote.id, note);
             showToast("Note updated successfully!", "success");
           } else {
@@ -318,11 +325,10 @@ export default function HomePage() {
     }
   }, [walletAddress, updateNote, showToast]);
 
-  // Sync from Blockchain
+  // Sync from Blockchain - FIXED VERSION
   const handleSyncFromBlockchain = useCallback(async () => {
     setIsSyncing(true);
     setSyncProgress(null);
-    setSyncResult(null);
 
     try {
       // Step 1: Recover notes from blockchain
@@ -334,8 +340,9 @@ export default function HomePage() {
       );
 
       if (!recoveryResult.success) {
-        setSyncResult(recoveryResult);
+        showToast(recoveryResult.message, "error");
         setIsSyncing(false);
+        setShowSyncModal(false);
         return;
       }
 
@@ -345,34 +352,70 @@ export default function HomePage() {
         walletAddress
       );
 
-      // Step 3: Show results
-      setSyncResult({
-        ...recoveryResult,
-        saveResult
-      });
+      // Step 3: Close modal immediately
+      setShowSyncModal(false);
+      setIsSyncing(false);
 
-      // Step 4: Reload notes if any were saved
-      if (saveResult.savedCount > 0) {
-        // Trigger notes reload by updating a state or refetching
-        window.location.reload(); // Simple approach - you can improve this
+      // Step 4: Reload notes from database
+      if (saveResult.savedCount > 0 || saveResult.skippedCount > 0) {
+        try {
+          const response = await fetch(`http://localhost:4000/api/notes/wallet/${walletAddress}`, {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const parsedNotes = (data.notes || []).map(note => {
+              try {
+                const parsed = JSON.parse(note.content);
+                return {
+                  id: note.id,
+                  title: note.title,
+                  content: parsed.content,
+                  txHash: parsed.txHash,
+                  timestamp: parsed.timestamp,
+                  is_pinned: note.is_pinned || parsed.is_pinned || false,
+                  is_favorite: note.is_favorite || parsed.is_favorite || false,
+                  status: note.status || 'confirmed', // Synced notes are confirmed
+                  updated_at: note.updated_at,
+                  deleted_at: note.deleted_at,
+                  deletion_tx_hash: note.deletion_tx_hash,
+                  last_edit_tx_hash: note.last_edit_tx_hash
+                };
+              } catch {
+                return {
+                  ...note,
+                  timestamp: note.updated_at || note.timestamp,
+                  status: note.status || 'confirmed' // Synced notes are confirmed
+                };
+              }
+            });
+
+            // Update notes state
+            setNotes(parsedNotes);
+            showToast(`Sync complete! ${saveResult.savedCount} new notes added.`, "success");
+          }
+        } catch (error) {
+          console.error('Failed to reload notes:', error);
+          showToast("Sync completed but failed to reload notes. Please refresh.", "error");
+        }
+      } else {
+        showToast("Sync complete! All notes are up to date.", "success");
       }
 
     } catch (error) {
       console.error('Sync failed:', error);
-      setSyncResult({
-        success: false,
-        notesRecovered: 0,
-        message: `Sync failed: ${error.message}`
-      });
-    } finally {
+      showToast(`Sync failed: ${error.message}`, "error");
       setIsSyncing(false);
+      setShowSyncModal(false);
     }
-  }, [walletAddress]);
+  }, [walletAddress, showToast, setNotes]);
 
   const closeSyncModal = useCallback(() => {
     if (!isSyncing) {
       setShowSyncModal(false);
-      setSyncResult(null);
       setSyncProgress(null);
     }
   }, [isSyncing]);
@@ -618,7 +661,6 @@ export default function HomePage() {
             show={showSyncModal}
             isLoading={isSyncing}
             progress={syncProgress}
-            result={syncResult}
             onClose={closeSyncModal}
             onConfirm={handleSyncFromBlockchain}
           />

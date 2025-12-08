@@ -1,11 +1,10 @@
 import { memo } from 'react';
-import { RefreshCw, CheckCircle, XCircle } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 const SyncModal = memo(({
     show,
     isLoading,
     progress,
-    result,
     onClose,
     onConfirm
 }) => {
@@ -24,7 +23,7 @@ const SyncModal = memo(({
                 </div>
 
                 <div style={{ padding: '30px', paddingTop: '20px' }}>
-                    {!isLoading && !result && (
+                    {!isLoading ? (
                         <>
                             <div style={{
                                 textAlign: 'center',
@@ -57,9 +56,7 @@ const SyncModal = memo(({
                                 </button>
                             </div>
                         </>
-                    )}
-
-                    {isLoading && (
+                    ) : (
                         <>
                             <div style={{
                                 textAlign: 'center',
@@ -106,69 +103,6 @@ const SyncModal = memo(({
                                     </p>
                                 </div>
                             )}
-                        </>
-                    )}
-
-                    {result && (
-                        <>
-                            <div style={{
-                                textAlign: 'center',
-                                marginBottom: '20px',
-                                color: result.success ? 'var(--success)' : '#ef4444'
-                            }}>
-                                {result.success ? (
-                                    <CheckCircle size={48} strokeWidth={1.5} />
-                                ) : (
-                                    <XCircle size={48} strokeWidth={1.5} />
-                                )}
-                            </div>
-                            <p style={{
-                                textAlign: 'center',
-                                marginBottom: '15px',
-                                fontSize: '1.1rem',
-                                fontWeight: '600',
-                                color: 'var(--text-light)'
-                            }}>
-                                {result.success ? 'Sync Complete!' : 'Sync Failed'}
-                            </p>
-                            <p style={{
-                                textAlign: 'center',
-                                marginBottom: '25px',
-                                lineHeight: '1.6',
-                                color: 'var(--text-muted)'
-                            }}>
-                                {result.message}
-                            </p>
-                            {result.saveResult && (
-                                <div style={{
-                                    background: 'var(--bg-dark)',
-                                    padding: '15px',
-                                    borderRadius: '10px',
-                                    marginBottom: '20px',
-                                    fontSize: '0.9rem',
-                                    color: 'var(--text-muted)'
-                                }}>
-                                    <div style={{ marginBottom: '8px' }}>
-                                        ✅ New notes saved: <strong style={{ color: 'var(--text-light)' }}>{result.saveResult.savedCount}</strong>
-                                    </div>
-                                    <div>
-                                        ⏭️ Existing notes skipped: <strong style={{ color: 'var(--text-light)' }}>{result.saveResult.skippedCount}</strong>
-                                    </div>
-                                </div>
-                            )}
-                            <div className="modal-actions">
-                                <button
-                                    type="button"
-                                    onClick={onClose}
-                                    className="btn-submit"
-                                    style={{
-                                        width: '100%',
-                                        background: 'linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-teal) 100%)'
-                                    }}
-                                >
-                                    Done
-                                </button>
-                            </div>
                         </>
                     )}
                 </div>
