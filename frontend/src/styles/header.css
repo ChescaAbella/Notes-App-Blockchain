@@ -5,17 +5,17 @@
 
 /* Header glass style */
 header {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
+    background: rgba(3, 8, 18, 0.98);
+    backdrop-filter: blur(20px);
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     z-index: 1000;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid rgba(6, 182, 212, 0.15);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     transition: all 0.3s ease;
 }
-
 nav {
     display: flex;
     justify-content: space-between;
@@ -25,10 +25,11 @@ nav {
 
 /* Logo */
 .logo {
-    font-size: 1.5rem;
+    font-size: 1.8rem;
     font-weight: 700;
-    color: #6366f1;
+    color: #06b6d4;
     text-decoration: none;
+    text-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
 }
 
 /* Nav links */
@@ -36,17 +37,18 @@ nav {
     display: flex;
     list-style: none;
     gap: 2rem;
+    font-size: 20px;
 }
 
 .nav-links a {
     text-decoration: none;
-    color: #64748b;
+    color: #94a3b8;
     font-weight: 500;
     transition: color 0.3s ease;
 }
 
 .nav-links a:hover {
-    color: #6366f1;
+    color: #06b6d4;
 }
 
 /* Button system (clean unified) */
@@ -65,33 +67,101 @@ nav {
     transition: all 0.25s ease;
 }
 
-/* Sign In = ghost */
-.nav-actions .btn.ghost {
-    background: #f1f5f9;
-    color: #1e293b;
-}
-.nav-actions .btn.ghost:hover {
-    background: #e2e8f0;
-    transform: translateY(-2px);
-}
-
-/* Sign Up = purple gradient (matches auth pages) */
+/* Sign Up = cyan gradient */
 .nav-actions .btn.primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: 0px 8px 22px rgba(102, 126, 234, 0.35);
+    background: linear-gradient(135deg, #06b6d4 0%, #14b8a6 100%);
+    color: #0a0f1e;
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
 }
 .nav-actions .btn.primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0px 12px 28px rgba(118, 75, 162, 0.55);
+    box-shadow: 0 0 30px rgba(6, 182, 212, 0.6);
 }
 
-/* Logout = soft red → bright red hover */
-.nav-actions .btn.danger {
-    background: #ffe5e5;
-    color: #b91c1c;
+
+/* Wallet connected styles */
+.nav-actions.wallet-connected {
+    align-items: center;
 }
-.nav-actions .btn.danger:hover {
-    background: #ef4444;
-    color: white;
+
+.wallet-address-display {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(6, 182, 212, 0.1);
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.wallet-label {
+    font-size: 0.85rem;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.wallet-address-short {
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #06b6d4;
+    font-weight: 600;
+}
+
+.btn-copy-small {
+    background: transparent;
+    border: none;
+    color: #06b6d4;
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+.btn-copy-small:hover {
+    background: rgba(6, 182, 212, 0.2);
+}
+
+/* Custom select for wallet dropdown */
+.custom-select-wrapper {
+    position: relative;
+}
+
+.custom-select-wrapper .select-icon {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: #06b6d4;
+}
+
+.wallet-select {
+    padding: 0.6rem 2.5rem 0.6rem 1rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    border: 1px solid rgba(6, 182, 212, 0.3);
+    background: rgba(6, 182, 212, 0.1);
+    color: #e2e8f0;
+    appearance: none;
+    transition: all 0.3s ease;
+}
+
+.wallet-select:hover {
+    background: rgba(6, 182, 212, 0.15);
+    border-color: rgba(6, 182, 212, 0.5);
+}
+
+.wallet-select:focus {
+    outline: none;
+    border-color: #06b6d4;
+    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2);
+}
+
+.wallet-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
