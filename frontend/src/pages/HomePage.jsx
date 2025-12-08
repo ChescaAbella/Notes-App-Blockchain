@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   Lock,
   FileText,
@@ -31,6 +31,9 @@ import EmptyState from "../components/EmptyState";
 import Toast from "../components/Toast";
 import Footer from "../components/footer";
 
+// Services
+import { startTransactionMonitoring } from "../services/transactionConfirmation";
+
 export default function HomePage() {
   // State
   const [draft, setDraft] = useState({ title: "", content: "" });
@@ -51,6 +54,48 @@ export default function HomePage() {
   const { toast, showToast } = useToast();
   const { provider } = useBlockchain();
   const { isLoading: blockchainLoading, saveNoteToBlockchain } = useBlockchainTransaction();
+
+  // Monitor pending transactions and update their status
+  useEffect(() => {
+    if (!isConnected || !walletAddress || notes.length === 0) return;
+
+    const handleStatusUpdate = async (noteId, newStatus) => {
+      console.log(`Updating note ${noteId} status to ${newStatus}`);
+
+      try {
+        // Update status in database
+        const response = await fetch(`http://localhost:4000/api/notes/${noteId}/status`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            status: newStatus,
+            wallet_address: walletAddress
+          })
+        });
+
+        if (response.ok) {
+          // Update local state
+          const note = notes.find(n => n.id === noteId);
+          if (note) {
+            updateNote(noteId, { ...note, status: newStatus });
+          }
+
+          // Show toast notification
+          showToast(`Note confirmed on blockchain! ✓`, "success");
+        }
+      } catch (error) {
+        console.error('Failed to update note status:', error);
+      }
+    };
+
+    // Start monitoring and get cleanup function
+    const cleanup = startTransactionMonitoring(notes, handleStatusUpdate);
+
+    // Cleanup on unmount
+    return cleanup;
+  }, [notes, isConnected, walletAddress, updateNote, showToast]);
 
   // Modal Handlers
   const openNote = useCallback((note) => {

@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Link2, Star, Pin, Trash2 } from 'lucide-react';
+import { Link2, Star, Pin, Trash2, Clock, CheckCircle } from 'lucide-react';
 
 const NoteCard = memo(({
   note,
@@ -11,8 +11,31 @@ const NoteCard = memo(({
   onRestore,
   isLoading
 }) => {
+  // Determine transaction status badge
+  const getStatusBadge = () => {
+    if (note.status === 'pending') {
+      return (
+        <span className="status-badge pending" title="Transaction pending confirmation">
+          <Clock size={12} />
+          Pending
+        </span>
+      );
+    } else if (note.status === 'confirmed') {
+      return (
+        <span className="status-badge confirmed" title="Confirmed on blockchain">
+          <CheckCircle size={12} />
+          Confirmed
+        </span>
+      );
+    }
+    return null;
+  };
+
   return (
-    <div className={`note-item ${note.is_pinned ? 'pinned' : ''}`} style={{ cursor: 'pointer' }}>
+    <div
+      className={`note-item ${note.is_pinned ? 'pinned' : ''} ${note.status === 'pending' ? 'pending-tx' : ''}`}
+      style={{ cursor: 'pointer' }}
+    >
       {/* Header */}
       <div className="note-item-header">
         <h3 onClick={() => !showTrash && onOpen(note)}>
@@ -70,6 +93,9 @@ const NoteCard = memo(({
           </span>
         </div>
       </div>
+
+      {/* Status Badge */}
+      {getStatusBadge()}
 
       {/* Content */}
       <p className="note-item-content" onClick={() => !showTrash && onOpen(note)}>
