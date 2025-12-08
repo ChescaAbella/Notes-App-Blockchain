@@ -1,18 +1,39 @@
 import { memo } from 'react';
-import { Link2, Star, Pin } from 'lucide-react';
+import { Star, Pin, Trash2, Clock, CheckCircle } from 'lucide-react';
 
-const NoteCard = memo(({ 
-  note, 
-  showTrash, 
-  onOpen, 
-  onTogglePin, 
-  onToggleFavorite, 
-  onDelete, 
+const NoteCard = memo(({
+  note,
+  showTrash,
+  onOpen,
+  onTogglePin,
+  onToggleFavorite,
+  onDelete,
   onRestore,
-  isLoading 
+  isLoading
 }) => {
+  // Determine transaction status icon
+  const getStatusIcon = () => {
+    if (note.status === 'pending') {
+      return (
+        <span className="status-icon pending" title="Transaction pending confirmation">
+          <Clock size={18} />
+        </span>
+      );
+    } else if (note.status === 'confirmed') {
+      return (
+        <span className="status-icon confirmed" title="Confirmed on blockchain">
+          <CheckCircle size={18} />
+        </span>
+      );
+    }
+    return null;
+  };
+
   return (
-    <div className={`note-item ${note.is_pinned ? 'pinned' : ''}`} style={{cursor: 'pointer'}}>
+    <div
+      className={`note-item ${note.is_pinned ? 'pinned' : ''} ${note.status === 'pending' ? 'pending-tx' : ''}`}
+      style={{ cursor: 'pointer' }}
+    >
       {/* Header */}
       <div className="note-item-header">
         <h3 onClick={() => !showTrash && onOpen(note)}>
@@ -50,7 +71,7 @@ const NoteCard = memo(({
                 title="Delete note"
                 disabled={isLoading}
               >
-                {isLoading ? "..." : "🗑️"}
+                {isLoading ? "..." : <Trash2 size={16} />}
               </button>
             </>
           ) : (
@@ -65,9 +86,8 @@ const NoteCard = memo(({
               ↩️ Restore
             </button>
           )}
-          <span className="chain-badge">
-            <Link2 size={14} style={{display: 'inline-block', verticalAlign: 'middle'}} />
-          </span>
+          {/* Status Icon in place of chain badge */}
+          {getStatusIcon()}
         </div>
       </div>
 
@@ -81,19 +101,19 @@ const NoteCard = memo(({
         <span className="note-time">
           {showTrash && note.deleted_at
             ? new Date(note.deleted_at).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
             : note.timestamp
-            ? new Date(note.timestamp).toLocaleDateString("en-US", {
+              ? new Date(note.timestamp).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
                 hour: "2-digit",
                 minute: "2-digit",
               })
-            : "Just now"}
+              : "Just now"}
         </span>
         <span className="note-hash" title={note.deletion_tx_hash || note.txHash || ""}>
           {(note.deletion_tx_hash || note.txHash || "").slice(0, 6)}...

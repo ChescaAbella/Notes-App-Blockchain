@@ -10,7 +10,7 @@ export function useNotes() {
     const loadNotes = async () => {
       console.log('Loading notes - Wallet connected:', isConnected);
       console.log('Wallet address:', walletAddress);
-      
+
       if (!isConnected || !walletAddress) {
         console.warn('Wallet not connected - cannot load notes');
         setNotes([]); // Clear notes when wallet disconnects
@@ -18,19 +18,18 @@ export function useNotes() {
       }
 
       try {
-        // Use wallet address instead of token for authentication
         const response = await fetch(`http://localhost:4000/api/notes/wallet/${walletAddress}`, {
           headers: {
             'Content-Type': 'application/json'
           }
         });
-        
+
         console.log('Load notes response status:', response.status);
-        
+
         if (response.ok) {
           const data = await response.json();
           console.log('Loaded notes from database:', data);
-          
+
           // Parse the content field which contains our blockchain data
           const parsedNotes = (data.notes || []).map(note => {
             try {
@@ -43,6 +42,8 @@ export function useNotes() {
                 timestamp: parsed.timestamp,
                 is_pinned: note.is_pinned || parsed.is_pinned || false,
                 is_favorite: note.is_favorite || parsed.is_favorite || false,
+                // FIXED: Set status based on database value, default to 'confirmed' for existing notes
+                status: note.status || 'confirmed',
                 updated_at: note.updated_at,
                 deleted_at: note.deleted_at,
                 deletion_tx_hash: note.deletion_tx_hash,
@@ -52,7 +53,9 @@ export function useNotes() {
               // If parsing fails, return as is with all properties
               return {
                 ...note,
-                timestamp: note.updated_at || note.timestamp
+                timestamp: note.updated_at || note.timestamp,
+                // FIXED: Default to 'confirmed' for existing notes from database
+                status: note.status || 'confirmed'
               };
             }
           });
@@ -69,14 +72,15 @@ export function useNotes() {
         console.error('Failed to load notes:', error);
       }
     };
-    
+
     loadNotes();
   }, [walletAddress, isConnected]);
 
   const saveNoteToDatabase = async (noteData, editingNote = null) => {
     console.log('Wallet address:', walletAddress);
     console.log('Is connected:', isConnected);
-    
+    console.log('Saving note with data:', noteData);
+
     if (!isConnected || !walletAddress) {
       console.warn('Wallet not connected - cannot save note');
       return null;
@@ -86,16 +90,19 @@ export function useNotes() {
       const payload = {
         wallet_address: walletAddress,
         title: noteData.title,
-        content: JSON.stringify({ 
-          content: noteData.content, 
-          txHash: noteData.txHash, 
+        content: JSON.stringify({
+          content: noteData.content,
+          txHash: noteData.txHash,
           timestamp: noteData.timestamp,
           is_pinned: noteData.is_pinned || false,
-          is_favorite: noteData.is_favorite || false 
-        })
+          is_favorite: noteData.is_favorite || false
+        }),
+        txHash: noteData.txHash, // Store tx hash at root level too
+        status: noteData.status || 'pending', // Explicitly set status
+        last_edit_tx_hash: noteData.last_edit_tx_hash || null // Track edit transaction
       };
       console.log('Saving to database:', payload);
-      
+
       // If editing, update the existing note in the database
       let response;
       if (editingNote && editingNote.id) {
@@ -104,10 +111,7 @@ export function useNotes() {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({
-            ...payload,
-            wallet_address: walletAddress // Ensure wallet address is sent for verification
-          })
+          body: JSON.stringify(payload)
         });
       } else {
         response = await fetch('http://localhost:4000/api/notes', {
@@ -118,11 +122,11 @@ export function useNotes() {
           body: JSON.stringify(payload)
         });
       }
-      
+
       console.log('Database response status:', response.status);
       const data = await response.json();
       console.log('Database response data:', data);
-      
+
       if (response.ok) {
         return data.note.id;
       } else {
@@ -136,7 +140,12 @@ export function useNotes() {
   };
 
   const addNote = (newNote) => {
-    setNotes([newNote, ...notes]);
+    // Ensure the new note has status set
+    const noteWithStatus = {
+      ...newNote,
+      status: newNote.status || 'pending'
+    };
+    setNotes([noteWithStatus, ...notes]);
   };
 
   const updateNote = (noteId, updatedNote) => {
@@ -156,13 +165,14 @@ export function useNotes() {
       const payload = {
         wallet_address: walletAddress,
         title: note.title,
-        content: JSON.stringify({ 
-          content: note.content, 
-          txHash: note.txHash, 
+        content: JSON.stringify({
+          content: note.content,
+          txHash: note.txHash,
           timestamp: note.timestamp,
           is_pinned: updates.is_pinned !== undefined ? updates.is_pinned : note.is_pinned,
           is_favorite: updates.is_favorite !== undefined ? updates.is_favorite : note.is_favorite
-        })
+        }),
+        txHash: note.txHash
       };
 
       const response = await fetch(`http://localhost:4000/api/notes/${noteId}`, {
@@ -176,6 +186,9 @@ export function useNotes() {
       if (response.ok) {
         const data = await response.json();
         console.log('Updated note metadata:', data);
+
+        // Update local state
+        updateNote(noteId, { ...note, ...updates });
       } else {
         console.error('Failed to update metadata - status:', response.status);
       }
