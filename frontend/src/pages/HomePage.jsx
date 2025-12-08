@@ -6,8 +6,6 @@ import {
   Search,
   Telescope,
   Plus,
-  CheckCircle,
-  XCircle,
   Link2,
   Star,
   Pin,
@@ -30,9 +28,7 @@ import RestoreConfirmModal from "../components/RestoreConfirmModal";
 import NoteCard from "../components/NoteCard";
 import EmptyState from "../components/EmptyState";
 import Toast from "../components/Toast";
-
-// Utils
-import api from "../lib/api";
+import Footer from "../components/footer";
 
 export default function HomePage() {
   // State
@@ -86,20 +82,48 @@ export default function HomePage() {
   const togglePin = useCallback(async (noteId) => {
     const note = notes.find(n => n.id === noteId);
     if (note) {
-      const updated = { ...note, is_pinned: !note.is_pinned };
-      updateNote(noteId, updated);
-      await updateNoteMetadata(noteId, { is_pinned: !note.is_pinned });
+      try {
+        const response = await fetch(`http://localhost:4000/api/notes/${noteId}/pin`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            wallet_address: walletAddress
+          })
+        });
+
+        if (response.ok) {
+          updateNote(noteId, { ...note, is_pinned: !note.is_pinned });
+        }
+      } catch (error) {
+        console.error('Failed to toggle pin:', error);
+      }
     }
-  }, [notes, updateNote, updateNoteMetadata]);
+  }, [notes, walletAddress, updateNote]);
 
   const toggleFavorite = useCallback(async (noteId) => {
     const note = notes.find(n => n.id === noteId);
     if (note) {
-      const updated = { ...note, is_favorite: !note.is_favorite };
-      updateNote(noteId, updated);
-      await updateNoteMetadata(noteId, { is_favorite: !note.is_favorite });
+      try {
+        const response = await fetch(`http://localhost:4000/api/notes/${noteId}/favorite`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            wallet_address: walletAddress
+          })
+        });
+
+        if (response.ok) {
+          updateNote(noteId, { ...note, is_favorite: !note.is_favorite });
+        }
+      } catch (error) {
+        console.error('Failed to toggle favorite:', error);
+      }
     }
-  }, [notes, updateNote, updateNoteMetadata]);
+  }, [notes, walletAddress, updateNote]);
 
   // Save/Update Note
   const handleSaveNote = useCallback(async () => {
@@ -184,14 +208,21 @@ export default function HomePage() {
         action: "delete",
         noteId: noteToDelete.id,
         onSuccess: async (result) => {
-          await api.post(`notes/${noteToDelete.id}/soft-delete`, { 
-            txHash: result.txHash 
+          await fetch(`http://localhost:4000/api/notes/${noteToDelete.id}/soft-delete`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              txHash: result.txHash,
+              wallet_address: walletAddress
+            })
           });
 
-          const updatedNote = { 
-            ...noteToDelete, 
-            deleted_at: new Date().toISOString(), 
-            deletion_tx_hash: result.txHash 
+          const updatedNote = {
+            ...noteToDelete,
+            deleted_at: new Date().toISOString(),
+            deletion_tx_hash: result.txHash
           };
           updateNote(noteToDelete.id, updatedNote);
 
@@ -205,14 +236,23 @@ export default function HomePage() {
       console.error("Delete failed:", err);
     }
   }, [
-    noteToDelete, checkCooldown, showToast, saveNoteToBlockchain, 
+    noteToDelete, checkCooldown, showToast, saveNoteToBlockchain,
     provider, createWebWallet, walletAddress, updateNote, startCooldown
   ]);
 
   // Restore Note
   const handleRestoreNote = useCallback(async (note) => {
     try {
-      await api.post(`notes/${note.id}/restore`);
+      await fetch(`http://localhost:4000/api/notes/${note.id}/restore`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          wallet_address: walletAddress
+        })
+      });
+
       const restoredNote = { ...note, deleted_at: null, deletion_tx_hash: null };
       updateNote(note.id, restoredNote);
       showToast("Note restored!", "success");
@@ -221,11 +261,11 @@ export default function HomePage() {
       console.error("Restore failed:", err);
       showToast("Failed to restore note: " + (err.response?.data?.message || err.message), "error");
     }
-  }, [updateNote, showToast]);
+  }, [walletAddress, updateNote, showToast]);
 
   // Filtered Notes
   const filteredNotes = useMemo(() => {
-    let filtered = showTrash 
+    let filtered = showTrash
       ? notes.filter(note => note.deleted_at)
       : notes.filter(note => !note.deleted_at);
 
@@ -256,193 +296,199 @@ export default function HomePage() {
   // Not Connected State
   if (!isConnected) {
     return (
-      <div className="notes-wrap">
-        <div className="notes-container">
-          <div className="hero-section">
-            <div className="hero-content" style={{textAlign: 'center', padding: '80px 20px'}}>
-              <Lock size={80} strokeWidth={1.5} style={{margin: '0 auto 30px', opacity: 0.6}} />
-              <h1 className="page-title">Connect Your Wallet</h1>
-              <p className="page-subtitle">
-                Please connect your wallet from the header to start using the blockchain notes app.
-              </p>
+      <>
+        <div className="notes-wrap">
+          <div className="notes-container">
+            <div className="hero-section">
+              <div className="hero-content" style={{ textAlign: 'center', padding: '80px 20px' }}>
+                <Lock size={80} strokeWidth={1.5} style={{ margin: '0 auto 30px', opacity: 0.6 }} />
+                <h1 className="page-title">Connect Your Wallet</h1>
+                <p className="page-subtitle">
+                  Please connect your wallet from the header to start using the blockchain notes app.
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+        <Footer />
+      </>
     );
   }
 
   // Main Render
   return (
-    <div className="notes-wrap">
-      <div className="notes-container">
-        {/* Hero Section */}
-        <div className="hero-section">
-          <div className="hero-content">
-            <h1 className="page-title">Your Blockchain Notes</h1>
-            <p className="page-subtitle">Immutable. Decentralized. Forever yours.</p>
+    <>
+      <div className="notes-wrap">
+        <div className="notes-container">
+          {/* Hero Section */}
+          <div className="hero-section">
+            <div className="hero-content">
+              <h1 className="page-title">Your Blockchain Notes</h1>
+              <p className="page-subtitle">Immutable. Decentralized. Forever yours.</p>
+            </div>
+            <div className="wallet-connected-card">
+              <button
+                onClick={() => setShowModal(true)}
+                className="btn-create"
+                disabled={blockchainLoading || isInCooldown}
+              >
+                {isInCooldown ? (
+                  `Wait ${cooldownTimeLeft}s`
+                ) : (
+                  <>
+                    <Plus size={20} strokeWidth={2.5} />
+                    Create Note
+                  </>
+                )}
+              </button>
+            </div>
           </div>
-          <div className="wallet-connected-card">
-            <button
-              onClick={() => setShowModal(true)}
-              className="btn-create"
-              disabled={blockchainLoading || isInCooldown}
-            >
-              {isInCooldown ? (
-                `Wait ${cooldownTimeLeft}s`
-              ) : (
+
+          {/* Stats Bar */}
+          <div className="stats-bar">
+            <div className="stat-card">
+              <div className="stat-icon"><FileText size={40} strokeWidth={1.5} /></div>
+              <div className="stat-content">
+                <div className="stat-value">{notes.filter(n => !n.deleted_at).length}</div>
+                <div className="stat-label">Total Notes</div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon"><Link2 size={40} strokeWidth={1.5} /></div>
+              <div className="stat-content">
+                <div className="stat-value">{notes.filter(n => !n.deleted_at).length}</div>
+                <div className="stat-label">On-Chain</div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-icon"><Shield size={40} strokeWidth={1.5} /></div>
+              <div className="stat-content">
+                <div className="stat-value">100%</div>
+                <div className="stat-label">Secure</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Notes Section */}
+          <div className="notes-main">
+            {/* Header with Search */}
+            <div className="notes-header">
+              <h2>{showTrash ? "Trash" : "My Notes"}</h2>
+              <div className="search-container">
+                <input
+                  type="text"
+                  placeholder="Search notes..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="search-input-modern"
+                />
+                <Search className="search-icon" size={18} />
+              </div>
+            </div>
+
+            {/* Filter Bar */}
+            <div className="filter-bar">
+              {!showTrash && (
                 <>
-                  <Plus size={20} strokeWidth={2.5} />
-                  Create Note
+                  <button
+                    className={`filter-btn ${filter === "all" ? "active" : ""}`}
+                    onClick={() => setFilter("all")}
+                  >
+                    All Notes
+                  </button>
+                  <button
+                    className={`filter-btn ${filter === "favorites" ? "active" : ""}`}
+                    onClick={() => setFilter("favorites")}
+                  >
+                    <Star size={16} /> Favorites
+                  </button>
+                  <button
+                    className={`filter-btn ${filter === "pinned" ? "active" : ""}`}
+                    onClick={() => setFilter("pinned")}
+                  >
+                    <Pin size={16} /> Pinned
+                  </button>
                 </>
               )}
-            </button>
-          </div>
-        </div>
+              <button
+                className={`filter-btn ${showTrash ? "active" : ""}`}
+                onClick={() => setShowTrash(!showTrash)}
+                style={{ marginLeft: 'auto' }}
+              >
+                🗑️ Trash
+              </button>
+            </div>
 
-        {/* Stats Bar */}
-        <div className="stats-bar">
-          <div className="stat-card">
-            <div className="stat-icon"><FileText size={40} strokeWidth={1.5} /></div>
-            <div className="stat-content">
-              <div className="stat-value">{notes.filter(n => !n.deleted_at).length}</div>
-              <div className="stat-label">Total Notes</div>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon"><Link2 size={40} strokeWidth={1.5} /></div>
-            <div className="stat-content">
-              <div className="stat-value">{notes.filter(n => !n.deleted_at).length}</div>
-              <div className="stat-label">On-Chain</div>
-            </div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-icon"><Shield size={40} strokeWidth={1.5} /></div>
-            <div className="stat-content">
-              <div className="stat-value">100%</div>
-              <div className="stat-label">Secure</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Notes Section */}
-        <div className="notes-main">
-          {/* Header with Search */}
-          <div className="notes-header">
-            <h2>{showTrash ? "Trash" : "My Notes"}</h2>
-            <div className="search-container">
-              <input
-                type="text"
-                placeholder="Search notes..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="search-input-modern"
+            {/* Notes Grid or Empty State */}
+            {filteredNotes.length === 0 ? (
+              <EmptyState
+                showTrash={showTrash}
+                isInCooldown={isInCooldown}
+                cooldownTimeLeft={cooldownTimeLeft}
+                onCreateNote={() => setShowModal(true)}
               />
-              <Search className="search-icon" size={18} />
-            </div>
-          </div>
-
-          {/* Filter Bar */}
-          <div className="filter-bar">
-            {!showTrash && (
-              <>
-                <button
-                  className={`filter-btn ${filter === "all" ? "active" : ""}`}
-                  onClick={() => setFilter("all")}
-                >
-                  All Notes
-                </button>
-                <button
-                  className={`filter-btn ${filter === "favorites" ? "active" : ""}`}
-                  onClick={() => setFilter("favorites")}
-                >
-                  <Star size={16} /> Favorites
-                </button>
-                <button
-                  className={`filter-btn ${filter === "pinned" ? "active" : ""}`}
-                  onClick={() => setFilter("pinned")}
-                >
-                  <Pin size={16} /> Pinned
-                </button>
-              </>
+            ) : (
+              <div className="notes-masonry">
+                {filteredNotes.map((note, idx) => (
+                  <NoteCard
+                    key={note.id || idx}
+                    note={note}
+                    showTrash={showTrash}
+                    onOpen={openNote}
+                    onTogglePin={togglePin}
+                    onToggleFavorite={toggleFavorite}
+                    onDelete={handleDeleteNote}
+                    onRestore={() => setNoteToRestore(note)}
+                    isLoading={blockchainLoading}
+                  />
+                ))}
+              </div>
             )}
-            <button
-              className={`filter-btn ${showTrash ? "active" : ""}`}
-              onClick={() => setShowTrash(!showTrash)}
-              style={{ marginLeft: 'auto' }}
-            >
-              🗑️ Trash
-            </button>
           </div>
 
-          {/* Notes Grid or Empty State */}
-          {filteredNotes.length === 0 ? (
-            <EmptyState
-              showTrash={showTrash}
-              isInCooldown={isInCooldown}
-              cooldownTimeLeft={cooldownTimeLeft}
-              onCreateNote={() => setShowModal(true)}
-            />
-          ) : (
-            <div className="notes-masonry">
-              {filteredNotes.map((note, idx) => (
-                <NoteCard
-                  key={note.id || idx}
-                  note={note}
-                  showTrash={showTrash}
-                  onOpen={openNote}
-                  onTogglePin={togglePin}
-                  onToggleFavorite={toggleFavorite}
-                  onDelete={handleDeleteNote}
-                  onRestore={() => setNoteToRestore(note)}
-                  isLoading={blockchainLoading}
-                />
-              ))}
-            </div>
-          )}
+          {/* Modals */}
+          <NoteModal
+            showModal={showModal}
+            editingNote={editingNote}
+            draft={draft}
+            isLoading={blockchainLoading}
+            isInCooldown={isInCooldown}
+            cooldownTimeLeft={cooldownTimeLeft}
+            hasChanges={hasChanges}
+            onClose={closeModal}
+            onDraftChange={handleDraftChange}
+            onSubmit={addNoteOnChain}
+          />
+
+          <ConfirmModal
+            show={showConfirmModal}
+            isLoading={blockchainLoading}
+            onConfirm={handleSaveNote}
+            onCancel={() => setShowConfirmModal(false)}
+          />
+
+          <DeleteConfirmModal
+            show={!!noteToDelete}
+            note={noteToDelete}
+            isLoading={blockchainLoading}
+            isInCooldown={isInCooldown}
+            cooldownTimeLeft={cooldownTimeLeft}
+            onConfirm={confirmDelete}
+            onCancel={() => setNoteToDelete(null)}
+          />
+
+          <RestoreConfirmModal
+            show={!!noteToRestore}
+            note={noteToRestore}
+            onConfirm={() => handleRestoreNote(noteToRestore)}
+            onCancel={() => setNoteToRestore(null)}
+          />
+
+          {/* Toast */}
+          <Toast toast={toast} />
         </div>
-
-        {/* Modals */}
-        <NoteModal
-          showModal={showModal}
-          editingNote={editingNote}
-          draft={draft}
-          isLoading={blockchainLoading}
-          isInCooldown={isInCooldown}
-          cooldownTimeLeft={cooldownTimeLeft}
-          hasChanges={hasChanges}
-          onClose={closeModal}
-          onDraftChange={handleDraftChange}
-          onSubmit={addNoteOnChain}
-        />
-
-        <ConfirmModal
-          show={showConfirmModal}
-          isLoading={blockchainLoading}
-          onConfirm={handleSaveNote}
-          onCancel={() => setShowConfirmModal(false)}
-        />
-
-        <DeleteConfirmModal
-          show={!!noteToDelete}
-          note={noteToDelete}
-          isLoading={blockchainLoading}
-          isInCooldown={isInCooldown}
-          cooldownTimeLeft={cooldownTimeLeft}
-          onConfirm={confirmDelete}
-          onCancel={() => setNoteToDelete(null)}
-        />
-
-        <RestoreConfirmModal
-          show={!!noteToRestore}
-          note={noteToRestore}
-          onConfirm={() => handleRestoreNote(noteToRestore)}
-          onCancel={() => setNoteToRestore(null)}
-        />
-
-        {/* Toast */}
-        <Toast toast={toast} />
       </div>
-    </div>
+      <Footer />
+    </>
   );
 }
